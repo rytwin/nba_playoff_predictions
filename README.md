@@ -8,7 +8,6 @@ Then run `combine.R` to combine the data into one csv file.
 To do:
 
 -Create features that are from the year(s) before
-
 -Filter and use 1996 - present
 
 
