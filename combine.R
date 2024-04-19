@@ -2,6 +2,8 @@ library(tidyverse)
 
 csv_files <- list.files("data/", pattern = "\\.csv$")
 
+file_suffix <- substr(csv_files[grepl("team_stats_rs", csv_files)], nchar(csv_files[grepl("team_stats_rs", csv_files)]) - 12, nchar(csv_files[grepl("team_stats_rs", csv_files)]))
+
 coaches = read.csv(paste0("data/", csv_files[grepl("coaches", csv_files)])) %>%
   replace(is.na(.), 0)
 fran = read.csv(paste0("data/", csv_files[grepl("franchise_encyclopedia", csv_files)]))
@@ -21,6 +23,6 @@ df = fran %>%
   select(team, year, playoffs, everything()) %>%
   select(-c(coach_start, coach_end))
 
-write.csv(df, "data/all_team_stats_1980-2023.csv", row.names = FALSE)
+write.csv(df, paste0("data/all_team_stats_", file_suffix), row.names = FALSE)
 
 

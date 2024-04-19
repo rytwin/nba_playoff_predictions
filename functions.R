@@ -62,7 +62,9 @@ colnames_coaches <- c("coach", "team", "del0", "coach_team_exp", "coach_exp", "d
                       "coach_career_l", "coach_win_pct", "del3", "coach_season_p_g", "coach_season_p_w", "coach_season_p_l", 
                       "coach_team_p_g", "coach_team_p_w", "coach_team_p_l", "coach_career_p_g", "coach_career_p_w",
                       "coach_career_p_l", "year")
-colnames_preseason_odds <- c("team", "champ_odds", "year", "del", "o_u", "result")
+colnames_preseason_odds_a <- c("team", "champ_odds", "year")
+colnames_preseason_odds_b <- c("team", "champ_odds", "year", "del", "o_u", "result")
+colnames_preseason_odds_c <- c("team", "champ_odds", "del", "o_u", "result", "year")
 
 scrape_bballref <- function(url, table_id) {
   # function that takes a url and table number from that url, and returns the table as a dataframe.

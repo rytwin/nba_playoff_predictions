@@ -110,7 +110,13 @@ write.csv(team_stats_playoffs, paste0("data/team_stats_playoffs_", min(seasons),
 # scrape preseason odds
 seasons_odds <- seasons[seasons >= 1985]
 odds <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons_odds, 1, "_preseason_odds.html")
-names(odds) <- colnames_preseason_odds
+if(min(seasons_odds) > 1995) {
+  names(odds) <- colnames_preseason_odds_c
+} else if(max(seasons_odds) > 1995 & min(seasons_odds) <= 1995) {
+  names(odds) <- colnames_preseason_odds_b
+} else {
+  names(odds) <- colnames_preseason_odds_a
+}
 odds_df <- odds %>%
   mutate(champ_odds = as.integer(champ_odds)) %>%
   select(team, year, champ_odds, o_u) %>%
