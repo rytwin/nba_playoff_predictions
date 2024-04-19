@@ -321,3 +321,23 @@ rename_duplicate_coaches <- function(df, coach_col) {
                              TRUE ~ !!sym(coach_col)))
   return(df)
 }
+
+prior_years_stats_simple <- function(df, stat, years = 1, match) {
+  # function that takes a data frame and adds 'x' number of variables that equal 
+  # the value of that statistic for the previous 'x' number of years, given that
+  # 1 other variable matches in those years
+  
+  stat <- ifelse(is.numeric(stat), colnames(df[stat]), stat)
+  z <- df
+  
+  for(y in years) {
+    new_name <- paste0(stat, "_", y, "yr")
+    z <- mutate(z, new_stat = ifelse(lag(z[[match]], y) == z[[match]],
+                                     lag(z[[stat]], y), NA))
+    names(z)[names(z) == "new_stat"] <- new_name
+  }
+  return(z)
+} 
+
+
+
