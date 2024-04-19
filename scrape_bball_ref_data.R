@@ -8,7 +8,7 @@ seasons <- 1980:2023
 
 # scrape team stat tables: total, opp total, per 100 poss, opp per 100 poss, advanced, shooting, opp shooting 
 team_stats_rs <- scrape_team_stats(seasons, regular_season = TRUE)
-write.csv(team_stats_rs, "data/team_stats_rs_1980-2023.csv", row.names = FALSE) 
+write.csv(team_stats_rs, paste0("data/team_stats_rs_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE) 
 
 # scrape information from franchise encyclopedia
 franchise_tables <- list()
@@ -17,7 +17,7 @@ for(t in franchises) {
   table <- data.frame(scrape_bballref(team_url, 1))
   franchise_tables <- c(franchise_tables, list(table))
   print(t)
-  Sys.sleep(5)
+  Sys.sleep(10)
 }
 
 team_df <- bind_rows(franchise_tables)
@@ -50,8 +50,7 @@ team_df <- team_df %>%
          end_coach = sub("\\s*\\(.*", "", end_coach),
          across(c(start_coach, end_coach), trimws),
          top_ws = as.numeric(gsub(".*\\((.*?)\\).*", "\\1", top_ws))) %>%
-  filter(year >= 1980,
-         year < 2024) %>%
+  filter(year %in% seasons) %>%
   select(-c(league, w, l, srs, pace, ortg, drtg, del1, del2, finish, coach, playoff)) %>%
   mutate(across(c(start_coach, end_coach), ~ gsub("\\.\\s", "", .))) %>%
   rename_duplicate_coaches("start_coach") %>%
@@ -61,11 +60,8 @@ team_df <- team_df %>%
   select(-end_coach) %>%
   rename(end_coach = coach)
 
-write.csv(team_df, "data/franchise_encyclopedia_1980-2023.csv", row.names = FALSE) 
+write.csv(team_df, paste0("data/franchise_encyclopedia_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE)
 
-# merge with team stats
-all_team_stats <- all_team_stats %>%
-  merge(team_df, by = c("team", "year"), all = TRUE)
 
 # scrape team ratings pages
 ratings <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_ratings.html")
@@ -75,11 +71,8 @@ ratings_df <- ratings %>%
   select(team, year, conf, div, ortg2, drtg2, net_rtg2, mov_adj, ortg2_adj, drtg2_adj, net_rtg2_adj) %>%
   rename_teams()
 
-write.csv(ratings_df, "data/ratings_1980-2023.csv", row.names = FALSE)
+write.csv(ratings_df, paste0("data/ratings_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE)
 
-# merge with team stats
-all_team_stats <- all_team_stats %>%
-  merge(ratings_df, by = c("team", "year"), all = TRUE)
 
 # scrape coach information
 coaches <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_coaches.html")
@@ -101,22 +94,8 @@ coaches_df <- coaches_df %>%
          coach_id = gsub("st. jean", "stjean", coach_id)) %>%
   replace(is.na(.), 0)
 
-write.csv(coaches_df, "data/coaches_1980-2023.csv", row.names = FALSE)
+write.csv(coaches_df, paste0("data/coaches_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE)
 
-# scrape preseason odds
-seasons <- 1985:max(seasons)
-odds <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_preseason_odds.html")
-names(odds) <- colnames_preseason_odds
-odds_df <- odds %>%
-  mutate(champ_odds = as.integer(champ_odds)) %>%
-  select(team, year, champ_odds, o_u) %>%
-  rename_teams()
-
-write.csv(odds_df, "data/preseason_odds_1980-2023.csv", row.names = FALSE)
-
-# merge with team stats
-all_team_stats <- all_team_stats %>%
-  merge(odds_df, by = c("team", "year"), all = TRUE)
 
 # scrape playoff team stat tables: total, opp total, per 100 poss, opp per 100 poss, advanced, shooting, opp shooting 
 team_stats_playoffs <- scrape_team_stats(seasons, regular_season = FALSE)
@@ -124,24 +103,18 @@ keep_name_cols <- c("team", "year")
 cols_to_rename <- setdiff(names(team_stats_playoffs), keep_name_cols)
 new_colnames <- paste0("p_", cols_to_rename)
 names(team_stats_playoffs) <- c(keep_name_cols, new_colnames)
-  
-write.csv(team_stats_playoffs, "data/team_stats_playoffs_1980-2023.csv", row.names = FALSE) 
 
-breakdown = read.csv("data/team_breakdown.csv")
-
-all_team_stats <- all_team_stats %>%
-  merge(team_stats_playoffs, by = c("team", "year"), all = TRUE) %>%
-  merge(coaches_df, by.x = c("team", "year", "start_coach"), by.y = c("team", "year", "coach_id"), all.x = TRUE) %>%
-  merge(coaches_df, by.x = c("team", "year", "end_coach"), by.y = c("team", "year", "coach_id"), all.x = TRUE, suffixes = c("_start", "_end")) %>%
-  merge(breakdown, by = "year") %>%
-  select(team, year, playoffs, everything()) %>%
-  select(-c(coach_start, coach_end)) %>%
-  arrange(team, year)
+write.csv(team_stats_playoffs, paste0("data/team_stats_playoffs_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE)
 
 
-write.csv(team_stats_playoffs, "data/all_team_stats_1980-2023.csv", row.names = FALSE)
+# scrape preseason odds
+seasons_odds <- seasons[seasons >= 1985]
+odds <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons_odds, 1, "_preseason_odds.html")
+names(odds) <- colnames_preseason_odds
+odds_df <- odds %>%
+  mutate(champ_odds = as.integer(champ_odds)) %>%
+  select(team, year, champ_odds, o_u) %>%
+  rename_teams()
 
-na_counts <- colSums(is.na(df))
-nas <- na_counts[na_counts != 0]
-
+write.csv(odds_df, paste0("data/preseason_odds_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE)
 

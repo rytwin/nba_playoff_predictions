@@ -39,22 +39,20 @@ colnames_team_stats_per100_opp <- c("rk", "team", "g", "mp", "opp_fg_per100", "o
                                     "opp_ast_per100", "opp_stl_per100", "opp_blk_per100", "opp_tov_per100", "opp_pf_per100",
                                     "opp_pts_per100", "year")
 colnames_team_stats_adv <- c("rk", "team", "age", "w", "l", "pw", "pl", "mov", "sos", "srs", "off_rtg", "def_rtg", "net_rtg",
-                             "pace", "ft_rate", "3pa_rate", "ts_pct", "del1", "efg", "tov_pct", "orb_pct", "ft/fga", "del2",
+                             "pace", "ft_rate", "rate_3pa", "ts_pct", "del1", "efg", "tov_pct", "orb_pct", "ft_per_fga", "del2",
                              "opp_efg", "opp_tov_pct", "opp_drb_pct", "opp_ft_per_fga", "del3", "arena", "attend", "attend_pg", "year")
 colnames_team_stats_adv_playoffs <- c("rk", "team", "age", "w", "l", "pw", "pl", "srs", "off_rtg", "def_rtg", "net_rtg",
-                                      "pace", "ft_rate", "3pa_rate", "ts_pct", "del1", "efg", "tov_pct", "orb_pct", "ft/fga", "del2",
+                                      "pace", "ft_rate", "rate_3pa", "ts_pct", "del1", "efg", "tov_pct", "orb_pct", "ft_per_fga", "del2",
                                       "opp_efg", "opp_tov_pct", "opp_drb_pct", "opp_ft_per_fga", "year")
-colnames_team_stats_shoot <- c("rk", "team", "g", "mp", "fgp", "avg_fg_dist", "del0", "pct_of_fg_2p", "pct_of_fg_0-3",
-                               "pct_of_fg_3-10", "pct_of_fg_10-16", "pct_of_fg_16-3p", "pct_of_fg_3p", "del1", "fgp2",
-                               "fgp_0-3", "fgp_3-10", "fgp_10-16", "fgp_16-3p", "fgp3", "del2", "pct_of_2p_ast", "pct_of_3p_ast",
-                               "del3", "pct_of_fg_dunk", "dunks_made", "del4", "pct_of_3_corner", "fgp3_corner", "del6",
-                               "heaves_att", "heaves_made", "year")
+colnames_team_stats_shoot <- c("rk", "team", "g", "mp", "fgp", "avg_fg_dist", "del0", "pct_of_fg_2p", "pct_of_fg_0_3",
+                               "pct_of_fg_3_10", "pct_of_fg_10_16", "pct_of_fg_16_3p", "pct_of_fg_3p", "del1", "fgp2",
+                               "fgp_0_3", "fgp_3_10", "fgp_10_16", "fgp_16_3p", "fgp3", "del2", "pct_of_2p_ast", "pct_of_3p_ast",
+                               "del3", "pct_of_fg_dunk", "dunks_made", "del4")
 colnames_team_stats_shoot_opp <- c("opp_rk", "team", "opp_g", "opp_mp", "opp_fgp", "opp_avg_fg_dist", "del0", "opp_pct_of_fg_2p",
-                                   "opp_pct_of_fg_0-3", "opp_pct_of_fg_3-10", "opp_pct_of_fg_10-16", "opp_pct_of_fg_16-3p",
-                                   "opp_pct_of_fg_3p", "del1", "opp_fgp2", "opp_fgp_0-3", "opp_fgp_3-10", "opp_fgp_10-16",
-                                   "opp_fgp_16-3p", "opp_fgp3", "del2", "opp_pct_of_2p_ast", "opp_pct_of_3p_ast", "del3",
-                                   "opp_pct_of_fg_dunk", "opp_dunks_made", "del4", "opp_pct_of_3_corner", "opp_fgp3_corner",
-                                   "year")
+                                   "opp_pct_of_fg_0_3", "opp_pct_of_fg_3_10", "opp_pct_of_fg_10_16", "opp_pct_of_fg_16_3p",
+                                   "opp_pct_of_fg_3p", "del1", "opp_fgp2", "opp_fgp_0_3", "opp_fgp_3_10", "opp_fgp_10_16",
+                                   "opp_fgp_16_3p", "opp_fgp3", "del2", "opp_pct_of_2p_ast", "opp_pct_of_3p_ast", "del3",
+                                   "opp_pct_of_fg_dunk", "opp_dunks_made", "del4")
 colnames_franchise_encyc <- c("year", "league", "team", "w", "l", "win_pct", "finish", "srs", "del1", "pace", "rel_pace",
                               "ortg", "rel_ortg", "drtg", "rel_drtg", "del2", "playoff", "coach", "top_ws")
 colnames_team_ratings <- c("rk", "team", "conf", "div", "w", "l", "win_pct", "mov", "ortg2", "drtg2", "net_rtg2",
@@ -88,10 +86,11 @@ scrape_bballref <- function(url, table_id) {
   return(teamPageTables)
 }
 
-scrape_team_stats <- function(years, regular_season = TRUE) {
+scrape_team_stats <- function(years, regular_season = TRUE, playoff_series_completed = 15) {
   # function that takes a vector of years and returns the team stats as one merged dataframe with all stats
   # (total, opp total, per 100, opp per 100, advanced, shooting, opp shooting)
   # set regular_season = TRUE for regular season stats or FALSE for playoff stats
+  # playoff_series_completed = number of playoff series completed in the current season (only relevant if you are scraping a season that is not yet completed)
   
   url <- ifelse(regular_season, "https://www.basketball-reference.com/leagues/NBA_", "https://www.basketball-reference.com/playoffs/NBA_")
   table_id <- ifelse(regular_season, 23, 19)
@@ -103,6 +102,8 @@ scrape_team_stats <- function(years, regular_season = TRUE) {
                          val < 1984 ~ table_id - 4,
                          val < 2016 & regular_season ~ table_id - 2,
                          TRUE ~ table_id)
+    idx_num <- ifelse(playoff_series_completed != 15, idx_num - 15 + playoff_series_completed, idx_num)
+    idx_num <- ifelse(playoff_series_completed == 0, idx_num - 1, idx_num)
     idx_add <- ifelse(val < 1997, 4, 6)
     scraped_tables <- scrape_bballref(season_url, seq.int(idx_num, idx_num+idx_add))
     for(i in 1:length(scraped_tables)){
@@ -113,10 +114,10 @@ scrape_team_stats <- function(years, regular_season = TRUE) {
           rename(made = Md..1,
                  Md..1 = Md..2)
       }
-      if("X..6" %in% names(df) & !regular_season) {
-        df <- df %>%
-          rename(Md..1 = X..6)
-      }
+      # if("X..6" %in% names(df) & !regular_season) {
+      #   df <- df %>%
+      #     rename(Md..1 = X..6)
+      # }
       if("Tm" %in% names(df)) {
         df <- df %>%
           rename(Team = Tm)
@@ -124,7 +125,7 @@ scrape_team_stats <- function(years, regular_season = TRUE) {
       list_of_dfs[[i]] = c(list_of_dfs[[i]], list(df))
     }
     print(val)
-    Sys.sleep(5)
+    Sys.sleep(10)
   }
   
   # combine each list of dataframes into one dataframe each
@@ -158,6 +159,9 @@ scrape_team_stats <- function(years, regular_season = TRUE) {
   
   if(regular_season) {
     names(adv) <- colnames_team_stats_adv
+    adv <- adv %>%
+      mutate(attend_pg = gsub(",", "", attend_pg),
+             attend = gsub(",", "", attend))
   } else {
     names(adv) <- colnames_team_stats_adv_playoffs
   }
@@ -166,29 +170,46 @@ scrape_team_stats <- function(years, regular_season = TRUE) {
     rename_teams() %>%
     mutate(net_rtg = as.numeric(net_rtg))
   
-  if(regular_season) {
-    colnames_team_stats_shoot <- c(colnames_team_stats_shoot, "pct_of_fg_layup", "layups_made", "del5")
+  if(max(years) > 2001 & min(years) > 2001) {
+    colnames_team_stats_shoot <- c(colnames_team_stats_shoot, "pct_of_fg_layup", "layups_made", "del5", "pct_of_3_corner",
+                                   "fgp3_corner", "del6", "heaves_att", "heaves_made", "year")
+    colnames_team_stats_shoot_opp <- c(colnames_team_stats_shoot_opp, "opp_pct_of_fg_layup", "opp_layups_made", "del5",
+                                       "opp_pct_of_3_corner", "opp_fgp3_corner", "year")
+  } else if(max(years) > 2001 & min(years) <= 2001) {
+    colnames_team_stats_shoot <- c(colnames_team_stats_shoot, "pct_of_3_corner", "fgp3_corner", "del6", "heaves_att",
+                                   "heaves_made", "year", "pct_of_fg_layup", "layups_made", "del5")
+    colnames_team_stats_shoot_opp <- c(colnames_team_stats_shoot_opp, "opp_pct_of_3_corner", "opp_fgp3_corner", "year",
+                                       "opp_pct_of_fg_layup", "opp_layups_made", "del5")
+  } else if(max(years) <= 2001 & max(years) >= 1997) {
+    colnames_team_stats_shoot <- c(colnames_team_stats_shoot, "pct_of_3_corner", "fgp3_corner", "del6", "heaves_att", "heaves_made", "year")
+    colnames_team_stats_shoot_opp <- c(colnames_team_stats_shoot_opp, "opp_pct_of_3_corner", "opp_fgp3_corner", "year")
   }
-  names(shoot) <- colnames_team_stats_shoot
-  shoot <- shoot %>%
-    select(-c(starts_with("del"), rk, g, mp, fgp, fgp2, fgp3)) %>%
-    rename_teams()
   
-  if(regular_season) {
-    colnames_team_stats_shoot_opp <- c(colnames_team_stats_shoot_opp, "opp_pct_of_fg_layup", "opp_layups_made", "del5")
+  if(max(years) >= 1997) {
+    names(shoot) <- colnames_team_stats_shoot
+    shoot <- shoot %>%
+      select(-c(starts_with("del"), rk, g, mp, fgp, fgp2, fgp3)) %>%
+      rename_teams()
+    
+    names(shoot_opp) <- colnames_team_stats_shoot_opp
+    shoot_opp <- shoot_opp %>%
+      select(-c(starts_with("del"), opp_rk, opp_g, opp_mp, opp_fgp, opp_fgp2, opp_fgp3)) %>%
+      rename_teams()
   }
-  names(shoot_opp) <- colnames_team_stats_shoot_opp
-  shoot_opp <- shoot_opp %>%
-    select(-c(starts_with("del"), opp_rk, opp_g, opp_mp, opp_fgp, opp_fgp2, opp_fgp3)) %>%
-    rename_teams()
   
   team_stats <- tot %>%
     merge(tot_opp, by = c("team", "year"), all = TRUE) %>%
     merge(per100, by = c("team", "year"), all = TRUE) %>%
     merge(per100_opp, by = c("team", "year"), all = TRUE) %>%
-    merge(adv, by = c("team", "year"), all = TRUE) %>%
-    merge(shoot, by = c("team", "year"), all = TRUE) %>%
-    merge(shoot_opp, by = c("team", "year"), all = TRUE) %>%
+    merge(adv, by = c("team", "year"), all = TRUE)
+  
+  if(max(years) >= 1997) {
+    team_stats <- team_stats %>%
+      merge(shoot, by = c("team", "year"), all = TRUE) %>%
+      merge(shoot_opp, by = c("team", "year"), all = TRUE)
+  }
+  
+  team_stats <- team_stats %>%
     filter(g != 0)
   
   return(team_stats)
@@ -206,7 +227,7 @@ scrape_yearly_tables <- function(url1, years, table_id, url2 = "") {
       mutate(year = y)
     all_tables <- c(all_tables, list(table))
     print(y)
-    Sys.sleep(5)
+    Sys.sleep(10)
   }
   
   return(bind_rows(all_tables))

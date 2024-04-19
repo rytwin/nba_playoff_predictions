@@ -1,13 +1,14 @@
 library(tidyverse)
 
-coaches = read.csv("data/coaches_1980-2023.csv") %>%
-  mutate(coach_id = gsub("st. jean", "stjean", coach_id)) %>%
+csv_files <- list.files("data/", pattern = "\\.csv$")
+
+coaches = read.csv(paste0("data/", csv_files[grepl("coaches", csv_files)])) %>%
   replace(is.na(.), 0)
-fran = read.csv("data/franchise_encyclopedia_1980-2023.csv")
-odds = read.csv("data/preseason_odds_1980-2023.csv")
-ratings = read.csv("data/ratings_1980-2023.csv")
-stats = read.csv("data/team_stats_1980-2023.csv")
-pstats = read.csv("data/team_stats_playoffs_1980-2023.csv")
+fran = read.csv(paste0("data/", csv_files[grepl("franchise_encyclopedia", csv_files)]))
+odds = read.csv(paste0("data/", csv_files[grepl("preseason_odds", csv_files)]))
+ratings = read.csv(paste0("data/", csv_files[grepl("ratings", csv_files)]))
+stats = read.csv(paste0("data/", csv_files[grepl("team_stats_rs", csv_files)]))
+pstats = read.csv(paste0("data/", csv_files[grepl("team_stats_playoffs", csv_files)]))
 breakdown = read.csv("data/team_breakdown.csv")
 
 df = fran %>%
