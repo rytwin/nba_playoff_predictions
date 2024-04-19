@@ -48,7 +48,7 @@ for(c in col_names_prior){
   df <- prior_years_stats_simple(df, c, c(1:3), "team")
 }
 
-test <- df %>%
+df <- df %>%
   mutate(coach_exp_diff = coach_exp_start - coach_exp_start_1yr,
          coach_win_pct_diff = coach_preseason_win_pct_adj - coach_preseason_win_pct_adj_1yr,
          new_coach_from_start = ifelse(start_coach == start_coach_1yr, 0, 1),
@@ -68,7 +68,7 @@ test <- df %>%
          win_pct_last2yr_over60 = ifelse(win_pct_1yr >= 0.6 & win_pct_2yr >= 0.6, 1, 0),
          win_pct_last3yr_over60 = ifelse(win_pct_1yr >= 0.6 & win_pct_2yr >= 0.6 & win_pct_3yr >= 0.6, 1, 0),) %>%
   select(team, year, playoffs, champ_odds, o_u, play_in, playoffs_1yr, win_pct_1yr, new_coach_from_start, new_coach_from_end,
-         coach_exp_start, coach_preseason_g, coach_preseason_win_pct, coach_team_exp_start, coach_preseason_g_tm,
+         coach_exp_start, coach_preseason_g, coach_preseason_win_pct_adj, coach_team_exp_start, coach_preseason_g_tm,
          coach_preseason_win_pct_tm_adj, coach_exp_diff, coach_win_pct_diff, rel_ortg_1yr, rel_drtg_1yr, top_ws_1yr, champion_1yr,
          finals_1yr, conf_finals_1yr, second_rd_1yr, proj_win_pct_1yr, mov_1yr, sos_1yr, srs_1yr,
          off_rtg_1yr, def_rtg_1yr, net_rtg_1yr, p_win_pct_1yr, p_proj_win_pct_1yr, p_srs_1yr, p_off_rtg_1yr,
