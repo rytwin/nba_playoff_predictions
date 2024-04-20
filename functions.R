@@ -66,6 +66,27 @@ colnames_preseason_odds_a <- c("team", "champ_odds", "year")
 colnames_preseason_odds_b <- c("team", "champ_odds", "year", "del", "o_u", "result")
 colnames_preseason_odds_c <- c("team", "champ_odds", "del", "o_u", "result", "year")
 
+colnames_player_total <- c("player", "pos", "age", "team", "g", "gs", "mp", "fg", "fga", "fgp", "fg3", "fga3", "fg3p",
+                           "fg2", "fga2", "fgp2", "efg", "ft", "fta", "ftp", "orb", "drb", "trb", "ast", "stl", "blk",
+                           "tov", "pf", "pts", "year")
+colnames_player_per100 <- c("player", "pos", "age", "team", "g", "gs", "mp", "fg_per100", "fga_per100", "fgp", "fg3_per100", "fga3_per100", "fgp3",
+                            "fg2_per100", "fga2_per100", "fgp2", "ft_per100", "fta_per100", "ftp", "oreb_per100", "dreb_per100",
+                            "totreb_per100", "ast_per100", "stl_per100", "blk_per100", "tov_per100", "pf_per100", "pts_per100",
+                            "ortg", "drtg", "year")
+colnames_player_adv <- c("player", "pos", "age", "team", "g", "mp", "per", "tsp", "rate_3pa", "ft_rate", "orb_pct",
+                         "drb_pct", "trb_pct", "ast_pct", "stl_pct", "blk_pct", "tov_pct", "usg", "ows", "dws", "ws",
+                         "ws_48", "obpm", "dbpm", "bpm", "vorp", "year")
+colnames_player_adjshoot <- c("player", "pos", "age", "team", "g", "mp", "fgp_la", "fgp2_la", "fgp3_la", "efg_la", "ftp_la",
+                              "tsp_la", "ft_rate_la", "rate_3pa_la", "fg_add", "ts_add", "year")
+colnames_player_shoot <- c("player", "pos", "age", "team", "g", "mp", "avg_fg_dist", "pct_of_fg_2p", "pct_of_fg_0_3",
+                           "pct_of_fg_3_10", "pct_of_fg_10_16", "pct_of_fg_16_3p", "pct_of_fg_3p",
+                           "fgp_0_3", "fgp_3_10", "fgp_10_16", "fgp_16_3p", "pct_of_2p_ast", "pct_of_3p_ast",
+                           "pct_of_fg_dunk", "dunks_made", "pct_of_3_corner", "fgp3_corner", "heaves_att",
+                           "heaves_made", "year")
+colnames_player_pbp <- c("player", "pos", "age", "team", "g", "mp", "pg_pct", "sg_pct", "sf_pct", "pf_pct", "c_pct",
+                         "pm_per100", "pm_net_per100", "badpass", "lostball", "shoot_fouls", "off_fouls", "shoot_fouls_drawn",
+                         "off_fouls_drawn", "pg_by_ast", "and1_fg", "fg_blkd", "year")
+
 scrape_bballref <- function(url, table_id) {
   # function that takes a url and table number from that url, and returns the table as a dataframe.
   # specifically for use with basketball reference because it removes the comments
