@@ -305,7 +305,23 @@ awards_df <- mvp_df %>%
   
 
 all_player_stats <- all_player_stats %>%
-  merge(awards_df, by = c("year", "player", "age"), all = TRUE)
+  merge(awards_df, by = c("year", "player", "age"), all = TRUE) %>%
+  rename(team = team.x) %>%
+  select(-team.y)
+
+write.csv(all_player_stats, "data/all_player_stats_1980-2023.csv", row.names = FALSE)
 
 
+draft_seasons <- 1960:2023
+draft <- scrape_yearly_tables("https://www.basketball-reference.com/draft/NBA_", draft_seasons, 1, ".html")
+draft_df <- draft %>%
+  filter(Rk != "",
+         Rk != "Rk") %>%
+  select(Player, year, Pk, Tm, College, Yrs) %>%
+  rename(pick = Pk,
+         player = Player,
+         team = Tm,
+         college = College,
+         experience = Yrs)
 
+write.csv(draft_df, "data/draft_1960-2023.csv", row.names = FALSE)
