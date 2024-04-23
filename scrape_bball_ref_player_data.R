@@ -4,8 +4,10 @@ library(stringr)
 source("functions.R")
 
 
+# select seasons
 seasons <- 1980:2024
 
+# gets total player statistics for all selected seasons (regular season)
 scrape1 <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_totals.html")
 player_total_rs <- scrape1 %>%
   filter(Rk != "Rk") %>%
@@ -16,6 +18,7 @@ player_total_rs <- scrape1 %>%
 names(player_total_rs) <- c(colnames_player_total, "tm_order")
 
 
+# gets per possession player statistics for all selected seasons (regular season)
 scrape2 <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_per_poss.html")
 player_per100_rs <- scrape2 %>%
   filter(Rk != "Rk") %>%
@@ -27,6 +30,7 @@ player_per100_rs <- player_per100_rs %>%
   select(-c(fgp, fgp3, fgp2, ftp))
 
 
+# gets advanced player statistics for all selected seasons (regular season)
 scrape3 <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_advanced.html")
 player_adv_rs <- scrape3 %>%
   filter(Rk != "Rk") %>%
@@ -36,6 +40,7 @@ player_adv_rs <- scrape3 %>%
 names(player_adv_rs) <- colnames_player_adv
 
 
+# gets adjusted shooting player statistics for all selected seasons (regular season)
 scrape4 <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons, 1, "_adj_shooting.html")
 player_adjshoot_rs <- scrape4 %>%
   filter(Rk != "Rk",
@@ -46,6 +51,7 @@ player_adjshoot_rs <- scrape4 %>%
 names(player_adjshoot_rs) <- colnames_player_adjshoot
 
 
+# gets player shooting statistics for all selected seasons (regular season)
 seasons_shoot <- seasons[seasons > 1996]
 scrape5 <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons_shoot, 1, "_shooting.html")
 player_shoot_rs <- scrape5 %>%
@@ -56,6 +62,7 @@ player_shoot_rs <- scrape5 %>%
 names(player_shoot_rs) <- colnames_player_shoot
 
 
+# gets player play-by-play statistics for all selected seasons (regular season)
 scrape6 <- scrape_yearly_tables("https://www.basketball-reference.com/leagues/NBA_", seasons_shoot, 1, "_play-by-play.html")
 player_pbp_rs <- scrape6 %>%
   filter(Rk != "Rk") %>%
@@ -68,6 +75,7 @@ player_pbp_rs <- player_pbp_rs %>%
   mutate(across(c(pg_pct:c_pct), ~ ifelse(is.na(.), 0, .)))
 
 
+# combines all regular season statistics into one dataframe
 all_player_stats_rs <- player_total_rs %>%
   merge(player_per100_rs, by = c("year", "team", "player", "age", "pos", "g", "gs", "mp"), all = TRUE) %>%
   merge(player_adv_rs, by = c("year", "team", "player", "age", "pos", "g", "mp"), all = TRUE) %>%
@@ -80,6 +88,7 @@ all_player_stats_rs <- player_total_rs %>%
 
 seasons = 1980:2023
 
+# gets player total statistics for all selected seasons (playoffs)
 scrape7 <- scrape_yearly_tables("https://www.basketball-reference.com/playoffs/NBA_", seasons, 1, "_totals.html")
 player_total_po <- scrape7 %>%
   filter(Rk != "Rk") %>%
@@ -89,6 +98,7 @@ player_total_po <- scrape7 %>%
 names(player_total_po) <- colnames_player_total
 
 
+# gets player per possession statistics for all selected seasons (playoffs)
 scrape8 <- scrape_yearly_tables("https://www.basketball-reference.com/playoffs/NBA_", seasons, 1, "_per_poss.html")
 player_per100_po <- scrape8 %>%
   filter(Rk != "Rk") %>%
@@ -100,6 +110,7 @@ player_per100_po <- player_per100_po %>%
   select(-c(fgp, fgp3, fgp2, ftp))
 
 
+# gets player advanced statistics for all selected seasons (playoffs)
 scrape9 <- scrape_yearly_tables("https://www.basketball-reference.com/playoffs/NBA_", seasons, 1, "_advanced.html")
 player_adv_po <- scrape9 %>%
   filter(Rk != "Rk") %>%
@@ -109,6 +120,7 @@ player_adv_po <- scrape9 %>%
 names(player_adv_po) <- colnames_player_adv
 
 
+# gets player shooting statistics for all selected seasons (playoffs)
 seasons_shoot <- seasons[seasons > 1996]
 scrape10 <- scrape_yearly_tables("https://www.basketball-reference.com/playoffs/NBA_", seasons_shoot, 1, "_shooting.html")
 player_shoot_po <- scrape10 %>%
@@ -119,6 +131,7 @@ player_shoot_po <- scrape10 %>%
 names(player_shoot_po) <- colnames_player_shoot
 
 
+# gets player play-by-play statistics for all selected seasons (playoffs)
 scrape11 <- scrape_yearly_tables("https://www.basketball-reference.com/playoffs/NBA_", seasons_shoot, 1, "_play-by-play.html")
 player_pbp_po <- scrape11 %>%
   filter(Rk != "Rk") %>%
@@ -131,6 +144,7 @@ player_pbp_po <- player_pbp_po %>%
   mutate(across(c(pg_pct:c_pct), ~ ifelse(is.na(.), 0, .)))
 
 
+# combines all playoff statistics into one dataframe
 all_player_stats_po <- player_total_po %>%
   merge(player_per100_po, by = c("year", "team", "player", "age", "pos", "g", "gs", "mp"), all = TRUE) %>%
   merge(player_adv_po, by = c("year", "team", "player", "age", "pos", "g", "mp"), all = TRUE) %>%
@@ -138,15 +152,18 @@ all_player_stats_po <- player_total_po %>%
   merge(player_pbp_po, by = c("year", "team", "player", "age", "pos", "g", "mp"), all = TRUE) %>%
   select()
 
+# renames all playoff statistic columns with prefix "p_"
 keep_name_cols <- c("year", "team", "player", "age", "pos")
 cols_to_rename <- setdiff(names(all_player_stats_po), keep_name_cols)
 new_colnames <- paste0("p_", cols_to_rename)
 names(all_player_stats_po) <- c(keep_name_cols, new_colnames)
 
+# merges playoff and regular season statistics
 all_player_stats <- all_player_stats_rs %>%
   merge(all_player_stats_po, by = c("year", "team", "player", "age", "pos"), all = TRUE)
 
 
+# gets player awards data
 mvp = list()
 roy = list()
 dpoy = list()
@@ -295,6 +312,7 @@ alldef_df <- bind_rows(alldef) %>%
          player = gsub("\\*", "", player)) %>%
   select(year, player, age, team, alldef, alldef_tm, alldef1:alldef2, alldef_share)
 
+# merges all awards data into one dataframe
 awards_df <- mvp_df %>%
   merge(roy_df, by = c("year", "player", "age", "team"), all = TRUE) %>%
   merge(dpoy_df, by = c("year", "player", "age", "team"), all = TRUE) %>%
@@ -306,6 +324,7 @@ awards_df <- mvp_df %>%
   mutate(across(c(year, age, mvp_rank:alldef_share), as.numeric))
   
 
+# merges player statistics with player awards data
 all_player_stats <- all_player_stats %>%
   merge(awards_df, by = c("year", "player", "age"), all = TRUE) %>%
   mutate(tm_order = ifelse(is.na(tm_order), 0, tm_order)) %>%
@@ -313,9 +332,11 @@ all_player_stats <- all_player_stats %>%
   select(-team.y) %>%
   select(year:g, gs, mp, fg:alldef_share)
 
+# save file
 write.csv(all_player_stats, "data/all_player_stats_1980-2023.csv", row.names = FALSE)
 
 
+# gets draft data (year, round, pick, college) for players
 draft_seasons <- 1960:2023
 draft <- scrape_yearly_tables("https://www.basketball-reference.com/draft/NBA_", draft_seasons, 1, ".html")
 draft_df <- draft %>%
@@ -329,13 +350,17 @@ draft_df <- draft %>%
          experience = Yrs) %>%
   mutate(across(c(year, pick, experience), as.numeric))
 
+# save draft file
 write.csv(draft_df, "data/draft_1960-2023.csv", row.names = FALSE)
 
+
+# filter for players who have actually played in the NBA
 draft_df <- draft_df %>%
   filter(experience != "") %>%
   rename(draft_year = year) %>%
   select(-team)
 
+# for players who were drafted more than once, find the last year they were drafted
 final_pick <- draft_df %>%
   group_by(player, college, experience) %>%
   summarize(draft_year = max(draft_year))
@@ -345,6 +370,8 @@ draft_single <- draft_df %>%
   filter(!(player == "Manute Bol" & college == ""))
 
 
+# create a "TOT" (total) row for players who played on a team in the playoffs that they did not play for at all in the regular season,
+# and they played on at least one other team in the regular season
 split_rs_po <- all_player_stats %>%
   filter((player == "Scott Machado" & year == 2013) | (player == "Shaquille Harrison" & year == 2023)) %>%
   group_by(year, player, age, pos) %>%
@@ -353,6 +380,7 @@ split_rs_po <- all_player_stats %>%
          tm_order = 0) %>%
   select(year:age, team, everything())
 
+# combine draft data with all player data. use the checks below to find cases where different players have the same name
 final_output <- all_player_stats %>%
   rbind(split_rs_po) %>%
   rename_teams_abbrev() %>%
@@ -446,6 +474,8 @@ final_output <- all_player_stats %>%
   select(player, college, draft_year, pick, year:alldef_share) %>%
   arrange(player, college, draft_year, pick, year, tm_order)
 
+
+# check for duplicate/missing/incorrect entries
 check <- final_output %>%
   group_by(player, year, team) %>%
   summarize(count = n()) %>%
@@ -466,10 +496,13 @@ check3 <- final_output %>%
 check4 <- final_output %>%
   filter(is.na(g))
 
-
+# save file
 write.csv(final_output, "data/all_player_stats_1980-2024.csv", row.names = FALSE)
 
 
+# create another copy of player data with only one row for each player season
+# if players played for multiple teams in a season, only the row with total statistics is kept,
+# and the team column will show all teams that were played for in order (unless the player played with the same team in 2 different stints)
 single_rows <- final_output %>%
   mutate(player_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick),
          pl_yr_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick, "_", year)) %>%
@@ -518,6 +551,7 @@ single_rows <- final_output %>%
   select(player:age, exp, yrs_off, team:alldef_share, player_id, pl_yr_id)
 
 # use this to check for players where experience value is not correct
+# only for players who started playing before 1980, because that is where our dataset starts
 need_exp <- single_rows %>%
   group_by(player, player_id) %>%
   summarize(start_year = min(year),
@@ -527,7 +561,7 @@ need_exp <- single_rows %>%
          end_year >= 1989,
          draft_year <= 1979 | is.na(draft_year))
 
-
+# save file
 write.csv(single_rows, "data/all_player_stats_1980-2024_single_rows.csv", row.names = FALSE)
          
          
