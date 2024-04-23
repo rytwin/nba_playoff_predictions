@@ -7,7 +7,7 @@
 For scraping:</br>
 -`scrape_bball_ref_data.R`: Scrapes team statistics from basketball-reference.com. Saves as multiple csv files, you will use the next script to merge them.</br>
 -`combine.R`: Combines team data into one csv file. </br>
--`scrape_new_data.R`: Scrapes new team statistics and adds to existing data previously obtained using `scrape_bball_ref_data.R` and `combine.R`. </br>
+-`scrape_new_data.R`: Scrapes new team statistics and adds to existing data previously obtained using `scrape_bball_ref_data.R`. Saves as multiple csv files, and you could/would merge them using `combine.R`. </br>
 -`scrape_bball_ref_player_data.R`: Scrapes player statistics (including awards and draft data) from basketball-reference.com. Saves as one csv file.</br>
 
 For initial feature selection and engineering: </br>
