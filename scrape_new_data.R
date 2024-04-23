@@ -3,6 +3,7 @@ library(XML)
 library(stringr)
 source("functions.R")
 
+# get file list, and find minimum and maximum years already in the data
 csv_files <- list.files("data/", pattern = "\\.csv$")
 csv_files <- csv_files[grepl("\\d{4}-\\d{4}.csv$", csv_files)]
 year_min = 3000
@@ -19,6 +20,7 @@ for(f in csv_files) {
   }
 }
 
+# create file suffix based on years of existing data and read in file
 file_suffix = paste0(year_min, "-", year_max, ".csv")
 existing_data <- read.csv(paste0("data/", csv_files[grepl("all_team_stats_", csv_files)]))
 

@@ -1,9 +1,12 @@
 library(tidyverse)
 
+# get names of all csv files
 csv_files <- list.files("data/", pattern = "\\.csv$")
 
+# create file suffix based on what years there is data for in the files
 file_suffix <- substr(csv_files[grepl("team_stats_rs", csv_files)], nchar(csv_files[grepl("team_stats_rs", csv_files)]) - 12, nchar(csv_files[grepl("team_stats_rs", csv_files)]))
 
+# read in files
 coaches = read.csv(paste0("data/", csv_files[grepl("coaches", csv_files)])) %>%
   replace(is.na(.), 0)
 fran = read.csv(paste0("data/", csv_files[grepl("franchise_encyclopedia", csv_files)]))
@@ -12,6 +15,7 @@ ratings = read.csv(paste0("data/", csv_files[grepl("ratings", csv_files)]))
 stats = read.csv(paste0("data/", csv_files[grepl("team_stats_rs", csv_files)]))
 pstats = read.csv(paste0("data/", csv_files[grepl("team_stats_playoffs", csv_files)]))
 
+# merge all team statistics together
 df = fran %>%
   merge(stats, by = c("team", "year"), all = TRUE) %>%
   merge(pstats, by = c("team", "year"), all = TRUE) %>%
@@ -22,6 +26,7 @@ df = fran %>%
   select(team, year, playoffs, win_pct, start_coach, end_coach, everything()) %>%
   select(-c(coach_start, coach_end))
 
+# save file
 write.csv(df, paste0("data/all_team_stats_", file_suffix), row.names = FALSE)
 
 

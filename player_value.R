@@ -1,6 +1,7 @@
 library(tidyverse)
 source("functions.R")
 
+# read in data
 data <- read.csv("data/all_player_stats_1980-2024_single_rows.csv")
 od <- read.csv("data/opening_day_rosters.csv") %>%
   mutate(player_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick),
@@ -12,6 +13,7 @@ comb <- data %>%
   merge(od, by = "pl_yr_id")
 
 
+# add a few per game stats, percent of team games played, and adjusted win shares metric (WS with a prior)
 df <- data %>%
   mutate(min_pg = mp / g,
          pts_pg = pts / g,
@@ -35,6 +37,7 @@ df <- data %>%
          ws_48_adj = (ws / (mp + 48)) * 48,
          p_ws_48_adj = (p_ws / (p_mp + 48)) * 48)
 
+# select columns to use and create variables with data from prior seasons
 cols_prev <- c("g", "mp", "pts", "trb", "ast", "stl", "blk", "tov", "g_pct", "min_pg", "pts_pg", "trb_pg", "ast_pg",
                "stl_pg", "blk_pg", "tov_pg", "ortg", "drtg", "per", "ws", "ws_48", "ws_48_adj", "bpm", "vorp",
                "p_g", "p_mp", "p_pts", "p_pts_pg", "p_ws", "p_ws_48", "p_ws_48_adj", "p_bpm", "p_vorp", "mvp", "mvp_share",
@@ -44,13 +47,16 @@ for(c in cols_prev){
   df <- prior_years_stats_simple(df, c, c(1:3), "player_id")
 }
 
+# beta decay formula, used for weighted average in some variables below
 beta <- 0.2
+# weights to use when a player has at least 3 previous seasons
 weights3 <- exp(-beta * c(1, 2, 3))
 weights3 <- weights3 / sum(weights3)
-
+# weights to use when a player has only 2 previous seasons
 weights2 <- exp(-beta * c(1, 2))
 weights2 <- weights2 / sum(weights2)
 
+# create new features and select relevant features
 features_df <- df %>%
   arrange(player, year) %>%
   mutate(across(c(g_1yr:allnba_val_3yr), ~ replace(., is.na(.), 0)),
@@ -85,6 +91,6 @@ features_df <- df %>%
   ungroup() %>%
   select(pl_yr_id, year, pick, age, exp, g_1yr:allnba_val_avg_3yr)
 
-
+# save file
 write.csv(features_df, "data/player_features.csv", row.names = FALSE)
 

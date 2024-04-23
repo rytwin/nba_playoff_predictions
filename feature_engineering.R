@@ -1,9 +1,11 @@
 library(tidyverse)
 source("functions.R")
 
+# read in files
 data <- read.csv("data/all_team_stats_1980-2024.csv")
 breakdown <- read.csv("data/team_breakdown.csv")
 
+# calculate conference win percent for each season
 conf_win_pct <- data %>%
   group_by(year, conf) %>%
   summarize(w = sum(w),
@@ -14,6 +16,7 @@ conf_win_pct <- data %>%
   rename(e_win_pct = e,
          w_win_pct = w)
 
+# calculate win percent for playoff teams in each conference each season
 conf_win_pct_playoffs <- data %>%
   group_by(year, conf, playoffs) %>%
   summarize(min_conf_p_win_pct = min(win_pct),
@@ -24,6 +27,8 @@ conf_win_pct_playoffs <- data %>%
   select(-c(playoffs, w, l)) %>%
   pivot_wider(names_from = "conf", values_from = c("min_conf_p_win_pct", "conf_p_win_pct"))
 
+
+# create coach win percent variables and merge with conference win percent data from above
 df <- data %>%
   merge(breakdown, by = "year", all.x = TRUE) %>%
   mutate(proj_win_pct = pw / (pw + pl),
@@ -42,12 +47,14 @@ df <- data %>%
   arrange(team, year) %>%
   select(year, team, everything())
 
+# create new variables with values for each statistic from prior seasons
 col_names_prior <- colnames(df)[!colnames(df) %in% c("team", "year")]
 
 for(c in col_names_prior){
   df <- prior_years_stats_simple(df, c, c(1:3), "team")
 }
 
+# create new features and select relevant features
 df <- df %>%
   mutate(coach_exp_diff = coach_exp_start - coach_exp_start_1yr,
          coach_win_pct_diff = coach_preseason_win_pct_adj - coach_preseason_win_pct_adj_1yr,
@@ -77,4 +84,5 @@ df <- df %>%
          num_conf_teams, playoffs_last2yr, playoffs_last3yr, second_rd_last2yr, second_rd_last3yr, win_pct_last2yr,
          win_pct_last3yr, proj_win_pct_last2yr, proj_win_pct_last3yr, win_pct_last2yr_over60, win_pct_last3yr_over60)
 
+# save file
 write.csv(df, "data/team_features.csv", row.names = FALSE)

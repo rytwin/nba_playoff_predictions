@@ -3,6 +3,7 @@ library(XML)
 library(stringr)
 source("functions.R")
 
+# select seasons
 seasons <- 1980:2023
 
 
@@ -82,12 +83,14 @@ coaches_df <- coaches %>%
   mutate(coach = tolower(coach)) %>%
   select(-starts_with("del"))
 
+# check for coaches with the same name
 check_coach_names <- coaches_df %>%
   group_by(coach, coach_exp) %>%
   summarize(count = n()) %>%
   filter(count > 1) %>%
   pull(coach)
 
+# modify based on the check above
 coaches_df <- coaches_df %>%
   rename_duplicate_coaches("coach") %>%
   mutate(coach_id = paste0(substr(coach, 1, 1), sub("^[^ ]+ ", "", coach)),
@@ -122,5 +125,6 @@ odds_df <- odds %>%
   select(team, year, champ_odds, o_u) %>%
   rename_teams()
 
+# save file
 write.csv(odds_df, paste0("data/preseason_odds_", min(seasons), "-", max(seasons), ".csv"), row.names = FALSE)
 
