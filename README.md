@@ -1,11 +1,21 @@
 # nba_playoff_predictions
 
-Run `scrape_bball_ref_data.R` to get all data. This will call `functions.R`.</br> Then run `combine.R` to combine the data into one csv file.
+### Files
+
+-`functions.R`: Has helper functions for many of the scripts. This will be called from the scripts as necessary and doesn't need to be used directly.</br>
+
+For scraping:</br>
+-`scrape_bball_ref_data.R`: Scrapes team statistics from basketball-reference.com. Saves as multiple csv files, you will use the next script to merge them.</br>
+-`combine.R`: Combines team data into one csv file. </br>
+-`scrape_new_data.R`: Scrapes new team statistics and adds to existing data previously obtained using `scrape_bball_ref_data.R` and `combine.R`. </br>
+-`scrape_bball_ref_player_data.R`: Scrapes player statistics (including awards and draft data) from basketball-reference.com. Saves as one csv file.</br>
+
+For initial feature selection and engineering: </br>
+-`feature_engineering.R`: Initial feature selection and feature engineering for team data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped).</br>
+-`player_value.R`: Initial feature selection and feature engineering for player data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped).</br>
 
 
 To do:
-
--Create features that are from the year(s) before
 
 -Filter and use 1996 - present
 
