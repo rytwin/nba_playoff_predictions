@@ -416,6 +416,7 @@ final_output <- all_player_stats %>%
                              player == "Chris Wright" & year < 2015 ~ "Dayton",
                              player == "Mike James" & year < 2015 ~ "Duquesne",
                              player == "Mike James" & year < 2024 ~ "Lamar",
+                             player == "Tony Mitchell" & year == 2014 & team == "MIL" ~ "Alabama",
                              TRUE ~ college),
          draft_year = case_when(player == "Charles Jones" & year >= 1999 & year <= 2000 ~ NA,
                                 player == "Charles Smith" & year < 1998 & pos == "PG" ~ NA,
@@ -423,6 +424,7 @@ final_output <- all_player_stats %>%
                                 player == "Mark Jones" & year > 2000 ~ NA,
                                 player == "Reggie Williams" & year > 2000 ~ NA,
                                 player == "Chris Smith" & year > 2000 ~ NA,
+                                player == "Tony Mitchell" & year == 2014 & team == "MIL" ~ NA,
                                 TRUE ~ draft_year),
          pick = case_when(player == "Charles Jones" & year >= 1999 & year <= 2000 ~ NA,
                           player == "Charles Smith" & year < 1998 & pos == "PG" ~ NA,
@@ -430,6 +432,7 @@ final_output <- all_player_stats %>%
                           player == "Mark Jones" & year > 2000 ~ NA,
                           player == "Reggie Williams" & year > 2000 ~ NA,
                           player == "Chris Smith" & year > 2000 ~ NA,
+                          player == "Tony Mitchell" & year == 2014 & team == "MIL" ~ NA,
                           TRUE ~ pick),
          experience = case_when(player == "Charles Jones" & year >= 1999 & year <= 2000 ~ 2,
                                 player == "Charles Smith" & year < 1998 & pos == "PG" ~ 3,
@@ -437,6 +440,7 @@ final_output <- all_player_stats %>%
                                 player == "Mark Jones" & year > 2000 ~ 1,
                                 player == "Reggie Williams" & year > 2000 ~ 7,
                                 player == "Chris Smith" & year > 2000 ~ 1,
+                                player == "Tony Mitchell" & year == 2014 & team == "MIL" ~ 1,
                                 TRUE ~ experience),
          draft_year = ifelse(draft_year == 0, NA, draft_year)) %>%
   select(player, college, draft_year, pick, year:alldef_share) %>%

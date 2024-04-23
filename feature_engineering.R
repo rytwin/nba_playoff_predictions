@@ -77,4 +77,4 @@ df <- df %>%
          num_conf_teams, playoffs_last2yr, playoffs_last3yr, second_rd_last2yr, second_rd_last3yr, win_pct_last2yr,
          win_pct_last3yr, proj_win_pct_last2yr, proj_win_pct_last3yr, win_pct_last2yr_over60, win_pct_last3yr_over60)
 
-write.csv(df, "team_features.csv", row.names = FALSE)
+write.csv(df, "data/team_features.csv", row.names = FALSE)
