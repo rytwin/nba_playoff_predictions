@@ -361,4 +361,51 @@ prior_years_stats_simple <- function(df, stat, years = 1, match) {
 } 
 
 
+calculate_model_metrics <- function(df, model_formula, num_folds = 10, num_repeats = 5, seed = 123) {
+  # PARAMETERS
+  # df (dataframe): observations and responses
+  # model_formula (string): formula for model
+  # num_folds (int): number of folds in k-fold cross validation
+  # num_repeats (int): number of times k-fold cross validation is repeated
+  # seed (int): used to set seed for reproducibility
+  
+  # RETURNS
+  # dataframe with evaluation metrics of the model
+  
+  set.seed(seed)
+  model_metrics <- list()
+  for(i in 1:num_repeats) {
+    folds <- cut(sample(1:nrow(train)), breaks = num_folds, labels = FALSE)
+    for(j in 1:num_folds) {
+      
+      test_indexes <- which(folds == j, arr.ind = TRUE)
+      test_data <- train[test_indexes, ]
+      train_data <- train[-test_indexes, ]
+      new_model <- glm(model_formula, train_data, family = "binomial")
+      
+      pred_prob <- predict(new_model, test_data, type = "response")
+      pred <- ifelse(pred_prob > 0.5, 1, 0)
+      
+      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data$playoffs))
+      accuracy <- conf_matrix$overall["Accuracy"]
+      precision <- conf_matrix$byClass["Precision"]
+      recall <- conf_matrix$byClass["Sensitivity"]
+      f1_score <- conf_matrix$byClass["F1"]
+      
+      log_loss <- logLoss(test_data$playoffs, pred_prob)
+      auc_roc <- Metrics::auc(test_data$playoffs, pred_prob)
+      
+      new_metrics <- tibble(logloss = log_loss, auc = auc_roc, accuracy = accuracy,
+                            precision = precision, recall = recall, f1_score = f1_score)
+      
+      model_metrics <- c(model_metrics, list(new_metrics))
+    }
+  }
+  aggregate_metrics <- bind_rows(model_metrics) %>%
+    summarize_all(mean) %>%
+    mutate(name = model_formula) %>%
+    select(name, everything())
+  
+  return(aggregate_metrics)
+}
 
