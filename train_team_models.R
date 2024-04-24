@@ -2,6 +2,7 @@ library(tidyverse)
 library(rsample)
 library(Metrics)
 library(caret)
+library(class)
 source("functions.R")
 
 # read in data, filter for years > 1996, and drop NA values
@@ -18,7 +19,7 @@ test <- testing(split)
 # calculate true prevalance (in training set)
 actual_playoff_percent <- sum(train$playoffs) / nrow(train)
 
-# calculate metrics based on always predicting the most likely class
+# calculate metrics based on always predicting the most likely class (with probability equal to prevalance)
 train <- train %>%
   mutate(monkey_pred_prob = actual_playoff_percent,
          monkey_pred = ifelse(actual_playoff_percent >= 0.5, 1, 0))
@@ -30,12 +31,12 @@ monkey_recall <- sum(train$monkey_pred == 1 & train$playoffs == 1) / sum(train$p
 monkey_f1 <- 2 * ((monkey_precision * monkey_recall) / (monkey_precision + monkey_recall))
 
 # calculate metrics based on always predicting the same as the season before
-baseline <- calculate_model_metrics(train, "playoffs ~ playoffs_1yr")
+baseline <- calculate_model_metrics(train, "glm", "playoffs ~ playoffs_1yr")
 
-# calculate metrics based on always predicting the same as the season before
-new_model <- calculate_model_metrics(train, "playoffs ~ net_rtg_1yr")
+# calculate metrics based on a different variable
+new_metrics <- calculate_model_metrics(train, "glm", "playoffs ~ net_rtg_1yr")
 
-
-
+# calculate knn metrics
+knn_metrics <- calculate_model_metrics(train, "knn", "playoffs ~ net_rtg_1yr")
 
 

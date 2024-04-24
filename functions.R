@@ -361,9 +361,10 @@ prior_years_stats_simple <- function(df, stat, years = 1, match) {
 } 
 
 
-calculate_model_metrics <- function(df, model_formula, num_folds = 10, num_repeats = 5, seed = 123) {
+calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 10, num_repeats = 10, seed = 123) {
   # PARAMETERS
   # df (dataframe): observations and responses
+  # model_type (string): "glm" supported so far
   # model_formula (string): formula for model
   # num_folds (int): number of folds in k-fold cross validation
   # num_repeats (int): number of times k-fold cross validation is repeated
@@ -381,9 +382,13 @@ calculate_model_metrics <- function(df, model_formula, num_folds = 10, num_repea
       test_indexes <- which(folds == j, arr.ind = TRUE)
       test_data <- train[test_indexes, ]
       train_data <- train[-test_indexes, ]
-      new_model <- glm(model_formula, train_data, family = "binomial")
-      
-      pred_prob <- predict(new_model, test_data, type = "response")
+      if(model_type == "glm") {
+        new_model <- glm(model_formula, train_data, family = "binomial")
+        pred_prob <- predict(new_model, test_data, type = "response")
+      } else if(model_type == "knn") {
+        new_model <- knn3(as.formula(model_formula), data = train_data, k = 5)
+        pred_prob <- predict(new_model, test_data, type = "prob")[, 2]
+      }
       pred <- ifelse(pred_prob > 0.5, 1, 0)
       
       conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data$playoffs))
