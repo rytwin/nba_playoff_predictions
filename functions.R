@@ -372,6 +372,11 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
   
   # RETURNS
   # dataframe with evaluation metrics of the model
+  model_type = ifelse(model_type == "glmnet", "glmnet_1", model_type)
+  
+  if(!model_type %in% c("nb", "knn", "glm", "glmnet_0", "glmnet_1")){
+    stop(paste0("Error: ", model_type, " is not a supported model type.\nChoose from nb, knn, glm, glmnet (glmnet_0 or glmnet_1)"))
+  }
   
   set.seed(seed)
   model_metrics <- list()
@@ -388,6 +393,17 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       } else if(model_type == "knn") {
         new_model <- knn3(as.formula(model_formula), data = train_data, k = 5)
         pred_prob <- predict(new_model, test_data, type = "prob")[, 2]
+      } else if(model_type == "nb") {
+        new_model <- glmnet(as.formula(model_formula), data = train_data)
+        pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
+      }
+      else if(model_type == "glmnet_0") {
+        new_model <- glmnet(as.formula(model_formula), data = train_data)
+        pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
+      }
+      else if(model_type == "glmnet_1") {
+        new_model <- glmnet(X, y, family = "binomial", alpha = 1)
+        pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
       }
       pred <- ifelse(pred_prob > 0.5, 1, 0)
       
@@ -408,8 +424,9 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
   }
   aggregate_metrics <- bind_rows(model_metrics) %>%
     summarize_all(mean) %>%
-    mutate(name = model_formula) %>%
-    select(name, everything())
+    mutate(type = model_type,
+           name = model_formula) %>%
+    select(type, name, everything())
   
   return(aggregate_metrics)
 }

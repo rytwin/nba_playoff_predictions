@@ -3,6 +3,8 @@ library(rsample)
 library(Metrics)
 library(caret)
 library(class)
+library(e1071)
+library(glmnet)
 source("functions.R")
 
 # read in data, filter for years > 1996, and drop NA values
@@ -29,14 +31,22 @@ monkey_accuracy <- sum(train$monkey_pred == train$playoffs) / nrow(train)
 monkey_precision <- sum(train$monkey_pred == 1 & train$playoffs == 1) / sum(train$monkey_pred == 1)
 monkey_recall <- sum(train$monkey_pred == 1 & train$playoffs == 1) / sum(train$playoffs == 1)
 monkey_f1 <- 2 * ((monkey_precision * monkey_recall) / (monkey_precision + monkey_recall))
+monkey <- tibble(type = "monkey", name = "monkey", logloss = monkey_logloss, auc = monkey_auc, accuracy = monkey_accuracy,
+                 precision = monkey_precision, recall = monkey_recall, f1_score = monkey_f1)
 
-# calculate metrics based on always predicting the same as the season before
+# calculate metrics for logistic regression model
 baseline <- calculate_model_metrics(train, "glm", "playoffs ~ playoffs_1yr")
+glm_metrics <- calculate_model_metrics(train, "glm", "playoffs ~ net_rtg_1yr")
 
-# calculate metrics based on a different variable
-new_metrics <- calculate_model_metrics(train, "glm", "playoffs ~ net_rtg_1yr")
-
-# calculate knn metrics
+# calculate metrics for knn model
 knn_metrics <- calculate_model_metrics(train, "knn", "playoffs ~ net_rtg_1yr")
 
+# calculate metrics for naive bayes model
+nb_metrics <- calculate_model_metrics(train, "nb", "playoffs ~ net_rtg_1yr")
+
+# calculate metrics for logistic regression with ridge regularization
+glmnet_metrics <- calculate_model_metrics(train, "glmnet_0" , "playoffs ~ net_rtg_1yr")
+
+# calculate metrics for logistic regression with lasso regularization
+glmnet_metrics <- calculate_model_metrics(train, "glmnet_1" , "playoffs ~ net_rtg_1yr")
 
