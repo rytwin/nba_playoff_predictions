@@ -440,8 +440,8 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       
       test_data <- test_data %>%
         mutate(playoffs = as.numeric(as.character(playoffs)))
-      #pred_prob[pred_prob == 1] <- 0.999999
-      #pred_prob[pred_prob == 0] <- 0.000001
+      pred_prob[pred_prob == 1] <- 0.99999999999
+      pred_prob[pred_prob == 0] <- 0.00000000001
       log_loss <- logLoss(test_data$playoffs, pred_prob)
       auc_roc <- Metrics::auc(test_data$playoffs, pred_prob)
       

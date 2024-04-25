@@ -472,6 +472,8 @@ final_output <- all_player_stats %>%
                                 TRUE ~ experience),
          draft_year = ifelse(draft_year == 0, NA, draft_year)) %>%
   select(player, college, draft_year, pick, year:alldef_share) %>%
+  mutate(player_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick),
+         pl_yr_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick, "_", year)) %>%
   arrange(player, college, draft_year, pick, year, tm_order)
 
 
@@ -504,8 +506,6 @@ write.csv(final_output, "data/all_player_stats_1980-2024.csv", row.names = FALSE
 # if players played for multiple teams in a season, only the row with total statistics is kept,
 # and the team column will show all teams that were played for in order (unless the player played with the same team in 2 different stints)
 single_rows <- final_output %>%
-  mutate(player_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick),
-         pl_yr_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick, "_", year)) %>%
   group_by(pl_yr_id) %>%
   mutate(team = paste(team, collapse = "-"),
          team = gsub("TOT-", "", team)) %>%

@@ -3,14 +3,6 @@ source("functions.R")
 
 # read in data
 data <- read.csv("data/all_player_stats_1980-2024_single_rows.csv")
-od <- read.csv("data/opening_day_rosters.csv") %>%
-  mutate(player_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick),
-         pl_yr_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick, "_", year)) %>%
-  select(pl_yr_id, od_team, out_for_season)
-
-
-comb <- data %>%
-  merge(od, by = "pl_yr_id")
 
 
 # add a few per game stats, percent of team games played, and adjusted win shares metric (WS with a prior)
@@ -59,7 +51,7 @@ weights2 <- weights2 / sum(weights2)
 # create new features and select relevant features
 features_df <- df %>%
   arrange(player, year) %>%
-  mutate(across(c(g_1yr:allnba_val_3yr), ~ replace(., is.na(.), 0)),
+  mutate(across(c(allnba_share, g_1yr:allnba_val_3yr), ~ replace(., is.na(.), 0)),
          pick = ifelse(is.na(pick) | pick > 65, 65, pick)) %>%
   group_by(player_id) %>%
   mutate(cum_pts_pg = cumsum(pts_1yr) / cumsum(g_1yr),
@@ -89,8 +81,107 @@ features_df <- df %>%
                                         exp == 3 ~ allnba_val_1yr * weights2[1] + allnba_val_2yr * weights2[2],
                                         exp <= 2 ~ allnba_val_1yr),) %>%
   ungroup() %>%
-  select(pl_yr_id, year, pick, age, exp, g_1yr:allnba_val_avg_3yr)
+  select(player_id, pl_yr_id, year, pick, age, exp, yrs_off, allnba_share, g_1yr:allnba_val_avg_3yr)
+
+
+# NOTE: players who were on an opening night roster for their final season but did not play that season will have NA values for most stats.
+# You will need to manually add them like allnba_share to get an accurate value for them:
+# -When creating features_df, need to replace NAs with 0 and select the column at the end
+# -Add variables in features_plus: the 1 year prior version with case_whens and the current version replacing NAs with 0 again
+# -Unselect the original column at the end of features_plus
+
+
+# read in opening day rosters
+od <- read.csv("data/opening_day_rosters.csv") %>%
+  mutate(od_player_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick),
+         pl_yr_id = paste0(gsub("\\s", "", tolower(player)), "_", gsub("\\s", "", tolower(college)), "_", draft_year, "_", pick, "_", year)) %>%
+  select(pl_yr_id, od_player_id, od_team, year, age, pick, out_for_season) %>%
+  rename(od_year = year,
+         od_age = age,
+         od_pick = pick)
+
+# merge player stats with opening day rosters
+# for players who were on an opening night roster for a season but didn't play (so they aren't in the stats dataframe), fill in the variables
+features_plus <- features_df %>%
+  merge(od, by = "pl_yr_id", all.y = TRUE) %>%
+  mutate(year = ifelse(is.na(year), od_year, year),
+         player_id = ifelse(is.na(player_id), od_player_id, player_id),
+         age = ifelse(is.na(age), od_age, age),
+         pick = ifelse(is.na(pick), od_pick, pick),
+         pick = ifelse(is.na(pick), 65, pick)) %>%
+  arrange(player_id, year) %>%
+  mutate(across(c(pick, g_1yr:allnba_val_avg_3yr), ~ case_when(!is.na(.) ~ .,
+                                                               lead(player_id) != player_id & lag(player_id) != player_id ~ 0,
+                                                               !is.na(lead(.)) & lead(player_id) == player_id ~ lead(.),
+                                                               !is.na(lead(., 2)) & lead(player_id, 2) == player_id ~ lead(., 2),
+                                                               !is.na(lead(., 3)) & lead(player_id, 3) == player_id ~ lead(., 3),
+                                                               TRUE ~ .)),
+         allnba_share_1yr = case_when(!is.na(allnba_share_1yr) ~ allnba_share_1yr,
+                                      lag(player_id) != player_id ~ 0,
+                                      !is.na(lag(allnba_share)) ~ lag(allnba_share),
+                                      lag(player_id, 2) != player_id ~ 0,
+                                      !is.na(lag(allnba_share, 2)) ~ lag(allnba_share, 2),
+                                      lag(player_id, 3) != player_id ~ 0,
+                                      !is.na(lag(allnba_share, 2)) ~ lag(allnba_share, 2),
+                                      TRUE ~ allnba_share_1yr),
+         allnba_share = ifelse(is.na(allnba_share), 0, allnba_share),
+         exp = case_when(!is.na(exp) ~ exp,
+                         lead(player_id) != player_id & lag(player_id) != player_id ~ 1,
+                         !is.na(lag(exp)) & lag(player_id) == player_id ~ lag(exp) + 1,
+                         !is.na(lag(exp, 2)) & lag(player_id, 2) == player_id ~ lag(exp, 2) + 1,
+                         !is.na(lag(exp, 3)) & lag(player_id, 3) == player_id ~ lag(exp, 3) + 1,
+                         !is.na(lead(exp)) & lead(player_id) == player_id ~ lead(exp),
+                         !is.na(lead(exp, 2)) & lead(player_id, 2) == player_id ~ lead(exp, 2),
+                         !is.na(lead(exp, 3)) & lead(player_id, 3) == player_id ~ lead(exp, 3),
+                         TRUE ~ exp),
+         yrs_off = case_when(!is.na(yrs_off) ~ yrs_off,
+                             lag(player_id) != player_id ~ 0,
+                             lag(exp) == 1 ~ 0,
+                             !is.na(lag(yrs_off)) ~ year - lag(year) - 1,
+                             !is.na(lag(yrs_off, 2)) ~ year - lag(year, 2) - 1,
+                             !is.na(lag(yrs_off, 3)) ~ year - lag(year, 3) - 1,
+                             TRUE ~ yrs_off)) %>%
+  select(-c(od_year, od_player_id, od_age, od_pick, allnba_share))
 
 # save file
-write.csv(features_df, "data/player_features.csv", row.names = FALSE)
+write.csv(features_plus, "data/player_features.csv", row.names = FALSE)
+
+
+# summarize data by opening night team
+grouped_by_team <- features_plus %>%
+  filter(out_for_season == 0) %>%
+  select(-out_for_season) %>%
+  group_by(od_team, year) %>%
+  summarize(allnba_team_pred_sum = sum(allnba_share_1yr),
+            allnba_team_pred_max = max(allnba_share_1yr),
+            allnba_team_pred_count = sum(allnba_share_1yr >= 0.1),
+            allnba_team_pred_count2 = sum(allnba_share_1yr >= 0.05)) %>%
+  filter(od_team != "XXX")
+
+# compare opening night roster with roster that played the previous season
+# create variables based on player predictions
+data2 <- read.csv("data/all_player_stats_1980-2024.csv")
+team_stats_from_players <- data2 %>%
+  mutate(across(c(allnba_share, mp), ~ replace(., is.na(.), 0))) %>%
+  filter(team != "TOT",
+         mp != 0) %>%
+  group_by(pl_yr_id) %>%
+  mutate(allnba_share = (mp / sum(mp)) * allnba_share) %>%
+  select(pl_yr_id, player, year, team, allnba_share) %>%
+  ungroup() %>%
+  group_by(team, year) %>%
+  summarize(allnba_team_tot = sum(allnba_share)) %>%
+  ungroup() %>%
+  arrange(team, year) %>%
+  prior_years_stats_simple("allnba_team_tot", 1, "team") %>%
+  merge(grouped_by_team, by.x = c("team", "year"), by.y = c("od_team", "year"), all = TRUE) %>%
+  select(-allnba_team_tot) %>%
+  mutate(allnba_team_diff = allnba_team_pred_sum - allnba_team_tot_1yr)
+
+# save file
+write.csv(team_stats_from_players, "data/team_stats_from_players.csv", row.names = FALSE)
+
+
+
+  
 

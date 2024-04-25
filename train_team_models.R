@@ -10,10 +10,12 @@ library(rpart.plot)
 library(randomForest)
 source("functions.R")
 
-# read in data, filter for years > 1996, and drop NA values
+# read in data, filter for years >= 1996, drop NA values, merge with player-based variables
+player_data <- read.csv("data/team_stats_from_players.csv")
 data <- read.csv("data/team_features.csv") %>%
   filter(year >= 1996) %>%
-  drop_na(playoffs_1yr)
+  drop_na(playoffs_1yr) %>%
+  merge(player_data, by = c("team", "year"), all.x = TRUE)
 
 # train-test split
 set.seed(365)
