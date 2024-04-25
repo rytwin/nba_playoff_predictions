@@ -370,13 +370,15 @@ get_all_metrics <- function(df, model_type, model_formulas, num_folds = 10, num_
   # num_repeats (int): number of times k-fold cross validation is repeated
   # seed (int): used to set seed for reproducibility
   
-  glm_metrics <- list()
+  metrics_list <- list()
   for(m in model_formulas){
-    model_metrics <- calculate_model_metrics(train, model_type, m, num_folds = num_folds,
+    model_metrics <- calculate_model_metrics(df, model_type, m, num_folds = num_folds,
                                              num_repeats = num_repeats, k = k, seed = seed)
-    glm_metrics <- c(glm_metrics, list(model_metrics))
+    metrics_list <- c(metrics_list, list(model_metrics))
   }
-  glm_metrics <- bind_rows(glm_metrics)
+  metrics_list <- bind_rows(metrics_list)
+  
+  return(metrics_list)
 }
 
 
@@ -393,19 +395,19 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
   # dataframe with evaluation metrics of the model
   model_type = ifelse(model_type == "glmnet", "glmnet_1", model_type)
   
-  if(!model_type %in% c("nb", "knn", "glm", "glmnet_0", "glmnet_1")){
-    stop(paste0("Error: ", model_type, " is not a supported model type.\nChoose from nb, knn, glm, glmnet (glmnet_0 or glmnet_1)"))
+  if(!model_type %in% c("nb", "knn", "glm", "glmnet_0", "glmnet_1", "dt", "rf")){
+    stop(paste0("Error: ", model_type, " is not a supported model type.\nChoose from nb, knn, dt, rf, glm, glmnet (glmnet_0 or glmnet_1)"))
   }
   
   set.seed(seed)
   model_metrics <- list()
   for(i in 1:num_repeats) {
-    folds <- cut(sample(1:nrow(train)), breaks = num_folds, labels = FALSE)
+    folds <- cut(sample(1:nrow(df)), breaks = num_folds, labels = FALSE)
     for(j in 1:num_folds) {
       
       test_indexes <- which(folds == j, arr.ind = TRUE)
-      test_data <- train[test_indexes, ]
-      train_data <- train[-test_indexes, ]
+      test_data <- df[test_indexes, ]
+      train_data <- df[-test_indexes, ]
       if(model_type == "glm") {
         new_model <- glm(model_formula, train_data, family = "binomial")
         pred_prob <- predict(new_model, test_data, type = "response")
@@ -415,13 +417,16 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       } else if(model_type == "nb") {
         new_model <- naiveBayes(as.formula(model_formula), data = train_data)
         pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
-      }
-      else if(grepl("glmnet", model_type)) {
-        
+      } else if(model_type == "dt") {
+        new_model <- rpart(model_formula, data = train_data, method = "class")
+        pred_prob <- predict(new_model, test_data, type = "prob")[, 2]
+      } else if(model_type == "rf") {
+        new_model <- randomForest(as.formula(model_formula), data = train_data, type = "response")
+        pred_prob <- predict(new_model, test_data, type = "prob")[, 2]
+      } else if(grepl("glmnet", model_type)) {
         new_model <- glmnet(as.formula(model_formula), data = train_data)
         pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
-      }
-      else if(model_type == "glmnet_1") {
+      } else if(model_type == "glmnet_1") {
         new_model <- glmnet(X, y, family = "binomial", alpha = 1)
         pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
       }
@@ -433,11 +438,15 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       recall <- conf_matrix$byClass["Sensitivity"]
       f1_score <- conf_matrix$byClass["F1"]
       
+      test_data <- test_data %>%
+        mutate(playoffs = as.numeric(as.character(playoffs)))
+      #pred_prob[pred_prob == 1] <- 0.999999
+      #pred_prob[pred_prob == 0] <- 0.000001
       log_loss <- logLoss(test_data$playoffs, pred_prob)
       auc_roc <- Metrics::auc(test_data$playoffs, pred_prob)
       
       new_metrics <- tibble(logloss = log_loss, auc = auc_roc, accuracy = accuracy,
-                            precision = precision, recall = recall, f1_score = f1_score, k = k)
+                            precision = precision, recall = recall, f1_score = f1_score)
       
       model_metrics <- c(model_metrics, list(new_metrics))
     }
@@ -445,7 +454,8 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
   aggregate_metrics <- bind_rows(model_metrics) %>%
     summarize_all(mean) %>%
     mutate(type = model_type,
-           name = model_formula) %>%
+           name = model_formula,
+           k = ifelse(model_type == "knn", k, NA)) %>%
     select(type, name, everything())
   
   return(aggregate_metrics)
