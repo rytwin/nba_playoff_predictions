@@ -361,7 +361,26 @@ prior_years_stats_simple <- function(df, stat, years = 1, match) {
 } 
 
 
-calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 10, num_repeats = 10, seed = 123) {
+get_all_metrics <- function(df, model_type, model_formulas, num_folds = 10, num_repeats = 10, k = 5, seed = 123) {
+  # PARAMETERS
+  # df (dataframe): observations and responses
+  # model_type (string): "glm" supported so far
+  # model_formulas (list of strings): list of formulas to evaluate 
+  # num_folds (int): number of folds in k-fold cross validation
+  # num_repeats (int): number of times k-fold cross validation is repeated
+  # seed (int): used to set seed for reproducibility
+  
+  glm_metrics <- list()
+  for(m in model_formulas){
+    model_metrics <- calculate_model_metrics(train, model_type, m, num_folds = num_folds,
+                                             num_repeats = num_repeats, k = k, seed = seed)
+    glm_metrics <- c(glm_metrics, list(model_metrics))
+  }
+  glm_metrics <- bind_rows(glm_metrics)
+}
+
+
+calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 10, num_repeats = 10, k = 5, seed = 123) {
   # PARAMETERS
   # df (dataframe): observations and responses
   # model_type (string): "glm" supported so far
@@ -391,13 +410,14 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
         new_model <- glm(model_formula, train_data, family = "binomial")
         pred_prob <- predict(new_model, test_data, type = "response")
       } else if(model_type == "knn") {
-        new_model <- knn3(as.formula(model_formula), data = train_data, k = 5)
+        new_model <- knn3(as.formula(model_formula), data = train_data, k = k)
         pred_prob <- predict(new_model, test_data, type = "prob")[, 2]
       } else if(model_type == "nb") {
-        new_model <- glmnet(as.formula(model_formula), data = train_data)
+        new_model <- naiveBayes(as.formula(model_formula), data = train_data)
         pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
       }
-      else if(model_type == "glmnet_0") {
+      else if(grepl("glmnet", model_type)) {
+        
         new_model <- glmnet(as.formula(model_formula), data = train_data)
         pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
       }
@@ -417,7 +437,7 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       auc_roc <- Metrics::auc(test_data$playoffs, pred_prob)
       
       new_metrics <- tibble(logloss = log_loss, auc = auc_roc, accuracy = accuracy,
-                            precision = precision, recall = recall, f1_score = f1_score)
+                            precision = precision, recall = recall, f1_score = f1_score, k = k)
       
       model_metrics <- c(model_metrics, list(new_metrics))
     }
