@@ -14,6 +14,9 @@ For initial feature selection and engineering: </br>
 -`feature_engineering.R`: Initial feature selection and feature engineering for team data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped).</br>
 -`player_value.R`: Initial feature selection and feature engineering for player data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped).</br>
 
+For modeling: </br>
+-`train_team_models.R`: Trains various classification models for playoffs or not
+
 
 ### To do:
 -Filter and use 1996 - present</br></br>
@@ -26,3 +29,4 @@ For initial feature selection and engineering: </br>
 -Create separate model to predict player value and use this as a feature instead, and see how that improves performance </br>
 -Try different models, ex: KNN, Naive Bayes, Logistic Regression, Logistic Regression w/ regularization, Random Forest, etc... </br>
 -Build on this model to predict probability of advancing to each round as well
+-why is log loss so high for KNN and random forest?
