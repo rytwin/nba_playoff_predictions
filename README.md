@@ -28,5 +28,5 @@ For modeling: </br>
 
 -Create separate model to predict player value and use this as a feature instead, and see how that improves performance </br>
 -Try different models, ex: KNN, Naive Bayes, Logistic Regression, Logistic Regression w/ regularization, Random Forest, etc... </br>
--Build on this model to predict probability of advancing to each round as well
+-Build on this model to predict probability of advancing to each round as well </br>
 -why is log loss so high for KNN and random forest?
