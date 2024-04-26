@@ -120,7 +120,6 @@ all_metrics <- bind_rows(monkey, glm_metrics, knn_metrics, nb_metrics, dt_metric
                          glmnet0_metrics, glmnet1_metrics)
 
 
-
 # further evaluation of models
 ind_vars <- models[[1]]
 mdl <- paste(dep_var, "~", paste(ind_vars, collapse = " + "))
@@ -151,9 +150,10 @@ glm1_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(ind_vars))), y
 glm1_pred_prob <- predict(glm1_model, as.matrix(train_scaled %>% select(all_of(ind_vars))), type = "response")
 
 
-# choose models to evaluate (current model types and probs have to have matching elements)
+# choose models to evaluate (current model types and probs must have matching elements)
 current_model_types <- c("glm", "knn", "nb", "dt", "rf", "glm0", "glm1")
 probs <- list(glm_pred_prob, knn_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob, glm0_pred_prob, glm1_pred_prob)
+
 # bin probabilities and create calibration plot
 num_breaks <- 11
 breaks <- (seq(0, 1, length.out = num_breaks) - (1 / (num_breaks - 1)) / 2)[-1]
@@ -171,11 +171,12 @@ for(p in probs) {
 
 names(cal_plot) <- c("prob", current_model_types)
 cal_plot <- cal_plot %>% pivot_longer(cols = -prob, names_to = "model", values_to = "emp_prob")
-ggplot(cal_plot, aes(x = prob, y = emp_prob)) +
-  geom_line(color = "blue") +
-  geom_point(color = "blue", size = 0.75) +
+ggplot(cal_plot, aes(x = prob, y = emp_prob, color = model)) +
+  geom_line(show.legend = FALSE) +
+  geom_point(size = 0.75, show.legend = FALSE) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
-  labs(title = "Calibration Plot", x = "Predicted probability", y = "Empirical probability") +
+  scale_color_manual(values = plot_colors) +
+  labs(title = "Calibration", x = "Predicted probability", y = "Empirical probability") +
   facet_wrap(vars(model)) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
@@ -199,10 +200,10 @@ for(p in probs) {
 names(prec_plot) <- c("k", current_model_types)
 prec_plot <- prec_plot %>% pivot_longer(cols = -c(k), names_to = "model", values_to = "prec_at_k")
 
-ggplot(prec_plot, aes(x = k, y = prec_at_k)) +
-  geom_line(color = "blue") +
-  labs(title = "Precision-at-K Plot", x = "K", y = "Precision") +
-  facet_wrap(vars(model)) +
+ggplot(prec_plot, aes(x = k, y = prec_at_k, color = model)) +
+  geom_line(show.legend = FALSE) +
+  labs(title = "Precision at K", x = "K", y = "Precision") +
+  scale_color_manual(values = plot_colors) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
         strip.background = element_blank()) +
@@ -226,10 +227,10 @@ for(p in probs) {
 names(recall_plot) <- c("k", current_model_types)
 recall_plot <- recall_plot %>% pivot_longer(cols = -c(k), names_to = "model", values_to = "recall_at_k")
 
-ggplot(recall_plot, aes(x = k, y = recall_at_k)) +
-  geom_line(color = "blue") +
-  labs(title = "Precision-at-K Plot", x = "K", y = "Precision") +
-  facet_wrap(vars(model)) +
+ggplot(recall_plot, aes(x = k, y = recall_at_k, color = model)) +
+  geom_line(show.legend = FALSE) +
+  labs(title = "Recall at K", x = "K", y = "Recall") +
+  scale_color_manual(values = plot_colors) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
         strip.background = element_blank()) +
