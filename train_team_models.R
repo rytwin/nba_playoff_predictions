@@ -65,42 +65,111 @@ monkey <- tibble(type = "monkey", name = "monkey", logloss = monkey_logloss, auc
                  precision = monkey_precision, recall = monkey_recall, f1_score = monkey_f1)
 
 
-models <- c("playoffs ~ playoffs_1yr + net_rtg_1yr")
+dep_var <- "playoffs"
+models <- list(c("playoffs_1yr", "net_rtg_1yr"),
+               c("playoffs_1yr", "win_pct_1yr"))
 
 # calculate metrics for logistic regression models
-glm_metrics <- get_all_metrics(train, "glm", models)
+glm_metrics <- get_all_metrics(train, "glm", dep_var, models)
 
 # calculate metrics for knn models
 k_values <- c(5, 10)
 knn_metrics <- list()
 for(k in k_values) {
-  new <- get_all_metrics(train_scaled, "knn", models, k = k)
+  new <- get_all_metrics(train_scaled, "knn", dep_var, models, k = k)
   knn_metrics <- c(knn_metrics, list(new))
 }
 knn_metrics <- bind_rows(knn_metrics)
 
 # calculate metrics for naive bayes models
-nb_metrics <- get_all_metrics(train, "nb", models)
+nb_metrics <- get_all_metrics(train, "nb", dep_var, models)
 
 # calculate metrics for logistic regressions with ridge regularization
-glmnet0_metrics <- calculate_model_metrics(train_scaled, "glmnet_0" , "playoffs ~ net_rtg_1yr")
+lambda_values <- c(0.001, 0.01, 0.1, 1, 10)
+glmnet0_metrics = list()
+for(m in models) {
+  for(l in lambda_values) {
+    new <- calculate_glmnet_metrics(train_scaled, dep_var, m, alpha = 0, lambda = l)
+    glmnet0_metrics <- c(glmnet0_metrics, list(new))
+  }
+}
+glmnet0_metrics <- bind_rows(glmnet0_metrics)
 
 # calculate metrics for logistic regressions with lasso regularization
-glmnet1_metrics <- calculate_model_metrics(train_scaled, "glmnet_1" , "playoffs ~ net_rtg_1yr")
+lambda_values <- c(0.001, 0.01, 0.1, 1, 10)
+glmnet1_metrics = list()
+for(m in models) {
+  for(l in lambda_values) {
+    new <- calculate_glmnet_metrics(train_scaled, dep_var, m, alpha = 1, lambda = l)
+    glmnet1_metrics <- c(glmnet1_metrics, list(new))
+  }
+}
+glmnet1_metrics <- bind_rows(glmnet1_metrics)
 
 # calculate metrics for decision tree models
-dt_metrics <- get_all_metrics(train, "dt", models)
+dt_metrics <- get_all_metrics(train, "dt", dep_var, models)
 #rpart.plot(dt)
 #print(dt)
 
 # calculate metrics for random forest models
-rf_metrics <- get_all_metrics(train %>% mutate(playoffs = as.factor(playoffs)), "rf", models)
+rf_metrics <- get_all_metrics(train %>% mutate(playoffs = as.factor(playoffs)), "rf", dep_var, models)
 
 # combine all metrics into one dataframe
-all_metrics <- bind_rows(monkey, glm_metrics, knn_metrics, nb_metrics, dt_metrics, rf_metrics)
+all_metrics <- bind_rows(monkey, glm_metrics, knn_metrics, nb_metrics, dt_metrics, rf_metrics,
+                         glmnet0_metrics, glmnet1_metrics)
 
 
-rf <- randomForest(as.factor(playoffs) ~ net_rtg_1yr, train, type = "response")
-preds <- predict(rf, train, type = "prob")[, 2]
+
+# further evaluation of models (mostly calibration)
+mdl <- paste(dep_var, "~", paste(models[[1]], collapse = " + "))
+
+glm_model <- glm(mdl, train, family = "binomial")
+glm_pred_prob <- predict(glm_model, train, type = "response")
+
+knn_model <- knn3(as.formula(mdl), data = train_scaled, k = k)
+knn_pred_prob <- predict(knn_model, train_scaled, type = "prob")[, 2]
+
+nb_model <- naiveBayes(as.formula(mdl), data = train)
+nb_pred_prob <- predict(nb_model, train, type = "raw")[, 2]
+
+dt_model <- rpart(mdl, data = train, method = "class")
+dt_pred_prob <- predict(dt_model, train, type = "prob")[, 2]
+rpart.plot(dt_model)
+print(dt_model)
+
+rf_model <- randomForest(as.factor(playoffs) ~ net_rtg_1yr + win_pct_1yr, data = train, type = "response")
+rf_pred_prob <- predict(rf_model, train, type = "prob")[, 2]
+
+lam <- 0.01
+glm0_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(models[[1]]))), y = as.matrix(train_scaled[[dep_var]]),
+                     lambda = lam, alpha = 0, family = "binomial")
+glm0_pred_prob <- predict(glm0_model, as.matrix(train_scaled %>% select(all_of(models[[1]]))), type = "response")
+glm1_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(models[[1]]))), y = as.matrix(train_scaled[[dep_var]]),
+                     lambda = lam, alpha = 1, family = "binomial")
+glm1_pred_prob <- predict(glm1_model, as.matrix(train_scaled %>% select(all_of(models[[1]]))), type = "response")
+
+# bin probabilities and create calibration plot
+probs <- list(glm_pred_prob, knn_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob, glm0_pred_prob, glm1_pred_prob)
+num_breaks <- 11
+breaks <- (seq(0, 1, length.out = num_breaks) - (1 / (num_breaks - 1)) / 2)[-1]
+cal_plot <- tibble(prob = breaks)
+for(p in probs) {
+  bins <- cut(p, breaks = seq(0, 1, length.out = num_breaks), include.lowest = TRUE)
+  emp_prob <- numeric()
+  for(i in levels(bins)) {
+    inds <- which(bins == i)
+    actual <- (train %>% pull(playoffs))[inds]
+    emp_prob <- c(emp_prob, sum(actual) / length(actual))
+  }
+  cal_plot <- cbind(cal_plot, tibble(emp_prob))
+}
+
+names(cal_plot) <- c("prob", "glm", "knn", "nb", "dt", "rf", "glm0", "glm1")
+cal_plot <- cal_plot %>% pivot_longer(cols = -prob, names_to = "model", values_to = "emp_prob")
+ggplot(cal_plot, aes(x = prob, y = emp_prob, color = model)) +
+  geom_line() +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(title = "Calibration Plot", x = "Probability", y = "Empirical Probability")
 
 

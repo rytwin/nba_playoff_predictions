@@ -361,14 +361,21 @@ prior_years_stats_simple <- function(df, stat, years = 1, match) {
 } 
 
 
-get_all_metrics <- function(df, model_type, model_formulas, num_folds = 10, num_repeats = 10, k = 5, seed = 123) {
+get_all_metrics <- function(df, model_type, dep_var, models, num_folds = 10, num_repeats = 10, k = 5, seed = 123) {
   # PARAMETERS
   # df (dataframe): observations and responses
   # model_type (string): "glm" supported so far
-  # model_formulas (list of strings): list of formulas to evaluate 
+  # dep_var (string): response variable
+  # models (list of strings): list of character vectors (each vector is a set of variables to use)
   # num_folds (int): number of folds in k-fold cross validation
   # num_repeats (int): number of times k-fold cross validation is repeated
   # seed (int): used to set seed for reproducibility
+  
+  model_formulas <- character()
+  for (i in 1:length(models)) {
+    variables <- paste(models[[i]], collapse = " + ")
+    model_formulas <- c(model_formulas, paste(dep_var, "~", variables))
+  }
   
   metrics_list <- list()
   for(m in model_formulas){
@@ -385,7 +392,7 @@ get_all_metrics <- function(df, model_type, model_formulas, num_folds = 10, num_
 calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 10, num_repeats = 10, k = 5, seed = 123) {
   # PARAMETERS
   # df (dataframe): observations and responses
-  # model_type (string): "glm" supported so far
+  # model_type (string): nb, knn, glm, dt, rf supported
   # model_formula (string): formula for model
   # num_folds (int): number of folds in k-fold cross validation
   # num_repeats (int): number of times k-fold cross validation is repeated
@@ -393,10 +400,9 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
   
   # RETURNS
   # dataframe with evaluation metrics of the model
-  model_type = ifelse(model_type == "glmnet", "glmnet_1", model_type)
   
-  if(!model_type %in% c("nb", "knn", "glm", "glmnet_0", "glmnet_1", "dt", "rf")){
-    stop(paste0("Error: ", model_type, " is not a supported model type.\nChoose from nb, knn, dt, rf, glm, glmnet (glmnet_0 or glmnet_1)"))
+  if(!model_type %in% c("nb", "knn", "glm", "dt", "rf")){
+    stop(paste0("Error: ", model_type, " is not a supported model type.\nChoose from nb, knn, dt, rf, glm"))
   }
   
   set.seed(seed)
@@ -423,27 +429,20 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       } else if(model_type == "rf") {
         new_model <- randomForest(as.formula(model_formula), data = train_data, type = "response")
         pred_prob <- predict(new_model, test_data, type = "prob")[, 2]
-      } else if(grepl("glmnet", model_type)) {
-        new_model <- glmnet(as.formula(model_formula), data = train_data)
-        pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
-      } else if(model_type == "glmnet_1") {
-        new_model <- glmnet(X, y, family = "binomial", alpha = 1)
-        pred_prob <- predict(new_model, test_data, type = "raw")[, 2]
-      }
+      } 
       pred <- ifelse(pred_prob > 0.5, 1, 0)
       
-      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data$playoffs))
+      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data[[dep_var]]))
       accuracy <- conf_matrix$overall["Accuracy"]
       precision <- conf_matrix$byClass["Precision"]
       recall <- conf_matrix$byClass["Sensitivity"]
       f1_score <- conf_matrix$byClass["F1"]
       
-      test_data <- test_data %>%
-        mutate(playoffs = as.numeric(as.character(playoffs)))
+      test_data[[dep_var]] <- as.numeric(as.character(test_data[[dep_var]]))
       pred_prob[pred_prob == 1] <- 0.99999999999
       pred_prob[pred_prob == 0] <- 0.00000000001
-      log_loss <- logLoss(test_data$playoffs, pred_prob)
-      auc_roc <- Metrics::auc(test_data$playoffs, pred_prob)
+      log_loss <- logLoss(test_data[[dep_var]], pred_prob)
+      auc_roc <- Metrics::auc(test_data[[dep_var]], pred_prob)
       
       new_metrics <- tibble(logloss = log_loss, auc = auc_roc, accuracy = accuracy,
                             precision = precision, recall = recall, f1_score = f1_score)
@@ -456,6 +455,65 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
     mutate(type = model_type,
            name = model_formula,
            k = ifelse(model_type == "knn", k, NA)) %>%
+    select(type, name, everything())
+  
+  return(aggregate_metrics)
+}
+
+
+calculate_glmnet_metrics <- function(df, dep_var, ind_vars, num_folds = 10, num_repeats = 10, alpha = 1, 
+                                     lambda = 1, seed = 123) {
+  # PARAMETERS
+  # df (dataframe): observations and responses
+  # dep_var (string): response variable
+  # ind_vars (vector of strings): predictor variables
+  # num_folds (int): number of folds in k-fold cross validation
+  # num_repeats (int): number of times k-fold cross validation is repeated
+  # alpha (int): 0 or 1, for ridge or lasso regularization
+  # lambda (int): value for lambda (regularization strength)
+  # seed (int): used to set seed for reproducibility
+  
+  # RETURNS
+  # dataframe with evaluation metrics of the model
+  
+  set.seed(seed)
+  model_metrics <- list()
+  for(i in 1:num_repeats) {
+    folds <- cut(sample(1:nrow(df)), breaks = num_folds, labels = FALSE)
+    for(j in 1:num_folds) {
+      
+      test_indexes <- which(folds == j, arr.ind = TRUE)
+      test_data <- df[test_indexes, ]
+      train_data <- df[-test_indexes, ]
+      train_x = as.matrix(train_data %>% select(all_of(ind_vars)))
+      train_y = as.matrix(train_data[[dep_var]])
+      test_x = as.matrix(test_data %>% select(all_of(ind_vars)))
+
+      new_model <- glmnet(x = train_x, y = train_y, lambda = lambda, alpha = alpha, family = "binomial")
+      pred_prob <- predict(new_model, test_x, type = "response")
+      pred <- ifelse(pred_prob > 0.5, 1, 0)
+      
+      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data[[dep_var]]))
+      accuracy <- conf_matrix$overall["Accuracy"]
+      precision <- conf_matrix$byClass["Precision"]
+      recall <- conf_matrix$byClass["Sensitivity"]
+      f1_score <- conf_matrix$byClass["F1"]
+      
+      test_data[[dep_var]] <- as.numeric(as.character(test_data[[dep_var]]))
+      log_loss <- logLoss(test_data[[dep_var]], pred_prob)
+      auc_roc <- Metrics::auc(test_data[[dep_var]], pred_prob)
+      
+      new_metrics <- tibble(logloss = log_loss, auc = auc_roc, accuracy = accuracy,
+                            precision = precision, recall = recall, f1_score = f1_score)
+      
+      model_metrics <- c(model_metrics, list(new_metrics))
+    }
+  }
+  aggregate_metrics <- bind_rows(model_metrics) %>%
+    summarize_all(mean) %>%
+    mutate(type = ifelse(alpha == 1, "glmnet_lasso", "glmnet_ridge"),
+           name = paste(dep_var, "~", paste(ind_vars, collapse = " + ")),
+           lambda = lambda) %>%
     select(type, name, everything())
   
   return(aggregate_metrics)
