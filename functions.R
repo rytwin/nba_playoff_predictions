@@ -87,6 +87,17 @@ colnames_player_pbp <- c("player", "pos", "age", "team", "g", "mp", "pg_pct", "s
                          "pm_per100", "pm_net_per100", "badpass", "lostball", "shoot_fouls", "off_fouls", "shoot_fouls_drawn",
                          "off_fouls_drawn", "pg_by_ast", "and1_fg", "fg_blkd", "year")
 
+proj_theme <- theme(panel.background = element_rect(fill = "#F7F7F7"),
+                    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5), 
+                    panel.grid.major.x = element_line(linetype = "dotted", color = "#D9D6D5"), 
+                    panel.grid.major.y = element_line(linetype = "dotted", color = "#D9D6D5"), 
+                    axis.text.x = element_text(color = "black", size = 8), 
+                    axis.text.y = element_text(color = "black", size = 8),
+                    axis.line = element_line(color = "black"), 
+                    plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+                    plot.subtitle = element_text(size = 10, hjust = 0.5))
+plot_colors <- c("blue", "red", "green", "purple", "orange", "black", "magenta")
+
 scrape_bballref <- function(url, table_id) {
   # function that takes a url and table number from that url, and returns the table as a dataframe.
   # specifically for use with basketball reference because it removes the comments
