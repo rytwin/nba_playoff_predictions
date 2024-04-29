@@ -54,7 +54,7 @@ features_df <- df %>%
   mutate(across(c(allnba, allnba_share, g_1yr:allnba_val_3yr), ~ replace(., is.na(.), 0)),
          pick = ifelse(is.na(pick) | pick > 65, 65, pick)) %>%
   group_by(player_id) %>%
-  mutate(cum_pts_pg = cumsum(pts_1yr) / cumsum(g_1yr),
+  mutate(cum_pts_pg = ifelse(is.na(cumsum(pts_1yr) / cumsum(g_1yr)), 0, cumsum(pts_1yr) / cumsum(g_1yr)),
          cum_ws = cumsum(ws_1yr),
          cum_vorp = cumsum(vorp_1yr),
          cum_p_g = cumsum(p_g_1yr),
@@ -162,13 +162,13 @@ features_plus <- features_df %>%
          star = ifelse(allnba_share_avg_3yr > 0.4 & age <= 30, 1, 0),
          rookie = ifelse(exp == 1, 1, 0),
          injured = ifelse(g_pct_1yr < 0.65 & pts_pg_1yr > 15 & cum_allnba_share > 1 & age < 35, 1, 0),
-         years_from_prime = ifelse(age > 31, age - 31, max(0, 25 - age))) %>%
+         years_from_prime = ifelse(age > 31, age - 31, pmax(0, 25 - age))) %>%
   select(player_id, year, od_team, allnba, pick, age, exp, yrs_off, g_pct_1yr, g_pct_2yr, min_pg_1yr, min_pg_2yr, pts_pg_1yr, pts_pg_2yr, ortg_1yr,
          drtg_1yr,per_1yr, ws_48_adj_1yr, ws_48_adj_2yr, bpm_1yr, vorp_1yr, p_ws_1yr, p_ws_2yr, mvp_share_1yr, mvp_share_2yr, roy_share_1yr, roy_share_2yr,
          dpoy_share_1yr, dpoy_share_2yr, mip_share_1yr, mip_share_2yr, allnba_1yr, allnba1_1yr, allnba2_1yr, allnba3_1yr, allnba_share_1yr,
          allnba_share_2yr, allnba_share_3yr, alldef_share_1yr, alldef_share_2yr, allnba_val_1yr, allnba_val_2yr, allnba_val_3yr, cum_pts_pg, cum_ws,
          cum_vorp, cum_p_g, cum_p_pts_pg, cum_p_ws, cum_p_vorp, cum_mvp_share, cum_dpoy_share, cum_allnba, cum_allnba_share, cum_alldef, cum_alldef_share,
-         cum_allnba_val, ws_48_adj_avg_3yr, allnba_share_avg_3yr, mvp_share_avg_3yr, allnba_val_avg_3yr, old_first:years_from_prime)
+         cum_allnba_val, ws_48_adj_avg_3yr, allnba_share_avg_3yr, mvp_share_avg_3yr, allnba_val_avg_3yr, old_first:years_from_prime, out_for_season)
 
 # save file
 write.csv(features_plus, "data/player_features.csv", row.names = FALSE)

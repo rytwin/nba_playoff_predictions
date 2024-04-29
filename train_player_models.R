@@ -11,10 +11,11 @@ library(randomForest)
 library(pROC)
 source("functions.R")
 
-# read in data, filter for years >= 1996, change NAs to zero
+# read in data, filter for years >= 1996, drop NAs
 data <- read.csv("data/player_features.csv") %>%
-  filter(year >= 1996) %>%
-  mutate(allnba = ifelse(is.na(allnba), 0, allnba))
+  filter(year >= 1996,
+         out_for_season != 1) %>%
+  drop_na()
 
 # train-test split
 set.seed(365)
