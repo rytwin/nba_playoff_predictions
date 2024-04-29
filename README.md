@@ -15,7 +15,8 @@ For initial feature selection and engineering: </br>
 -`player_value.R`: Initial feature selection and feature engineering for player data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped). Also groups player data by team and by opening day team to use as variables for team models.</br>
 
 For modeling: </br>
--`train_team_models.R`: Trains various classification models for playoffs or not
+-`train_team_models.R`: Trains various classification models for playoffs or not </br>
+-`train_player_models.R`: Trains various classification models for whether a player makes an all-nba team or not
 
 
 ### To do:
