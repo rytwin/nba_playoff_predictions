@@ -67,8 +67,36 @@ monkey <- tibble(type = "monkey", name = "monkey", logloss = monkey_logloss, auc
 
 
 dep_var <- "playoffs"
-models <- list(c("playoffs_1yr", "net_rtg_1yr"),
-               c("playoffs_1yr", "win_pct_1yr"))
+models <- list(c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff"),
+               c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"),
+               c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "proj_win_pct_last2yr"),
+               c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"),
+               c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "proj_win_pct_last2yr"),
+               c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "num_conf_teams"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "playoffs_last2yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "playoffs_last3yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "second_rd_last2yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "second_rd_last3yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last3yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "proj_win_pct_last2yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last2yr_over60"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last3yr_over60"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "champion_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "finals_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "conf_finals_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_g_tm"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "top_ws_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "sos_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_win_pct_adj"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_win_pct_tm_adj"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "srs_1yr"),
+               c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "mov_1yr"),
+               c("win_pct_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "coach_win_pct_diff", "new_coach_from_end", "second_rd_1yr", "conf_p_win_pct_1yr"))
 
 # calculate metrics for logistic regression models
 glm_metrics <- get_all_metrics(train, "glm", dep_var, models)
@@ -121,38 +149,46 @@ all_metrics <- bind_rows(monkey, glm_metrics, knn_metrics, nb_metrics, dt_metric
 
 
 # further evaluation of models
-ind_vars <- models[[1]]
-mdl <- paste(dep_var, "~", paste(ind_vars, collapse = " + "))
-
-glm_model <- glm(mdl, train, family = "binomial")
+glm_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr")
+glm_model <- glm(paste(dep_var, "~", paste(glm_vars, collapse = " + ")), train, family = "binomial")
 glm_pred_prob <- predict(glm_model, train, type = "response")
 
-knn_model <- knn3(as.formula(mdl), data = train_scaled, k = k)
+knn_vars <- c("playoffs_1yr")
+knn_model <- knn3(as.formula(paste(dep_var, "~", paste(knn_vars, collapse = " + "))), data = train_scaled, k = k)
 knn_pred_prob <- predict(knn_model, train_scaled, type = "prob")[, 2]
 
-nb_model <- naiveBayes(as.formula(mdl), data = train)
+nb_vars <- c("playoffs_1yr")
+nb_model <- naiveBayes(as.formula(paste(dep_var, "~", paste(nb_vars, collapse = " + "))), data = train)
 nb_pred_prob <- predict(nb_model, train, type = "raw")[, 2]
 
-dt_model <- rpart(mdl, data = train, method = "class")
+dt_vars <- c("playoffs_1yr")
+dt_model <- rpart(paste(dep_var, "~", paste(dt_vars, collapse = " + ")), data = train, method = "class")
 dt_pred_prob <- predict(dt_model, train, type = "prob")[, 2]
 rpart.plot(dt_model)
 print(dt_model)
 
-rf_model <- randomForest(as.factor(playoffs) ~ net_rtg_1yr + win_pct_1yr, data = train, type = "response")
-rf_pred_prob <- predict(rf_model, train, type = "prob")[, 2]
+rf_vars <- c("playoffs_1yr")
+rf_train <- train %>%
+  mutate(playoffs = as.factor(playoffs))
+rf_model <- randomForest(as.formula(paste(dep_var, "~", paste(rf_vars, collapse = " + "))), data = rf_train, type = "response")
+rf_pred_prob <- predict(rf_model, rf_train, type = "prob")[, 2]
 
-lam <- 0.01
-glm0_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(ind_vars))), y = as.matrix(train_scaled[[dep_var]]),
-                     lambda = lam, alpha = 0, family = "binomial")
-glm0_pred_prob <- predict(glm0_model, as.matrix(train_scaled %>% select(all_of(ind_vars))), type = "response")
-glm1_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(ind_vars))), y = as.matrix(train_scaled[[dep_var]]),
-                     lambda = lam, alpha = 1, family = "binomial")
-glm1_pred_prob <- predict(glm1_model, as.matrix(train_scaled %>% select(all_of(ind_vars))), type = "response")
+lam0 <- 0.01
+glm0_vars <- c("playoffs_1yr")
+glm0_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(glm0_vars))), y = as.matrix(train_scaled[[dep_var]]),
+                     lambda = lam0, alpha = 0, family = "binomial")
+glm0_pred_prob <- predict(glm0_model, as.matrix(train_scaled %>% select(all_of(glm0_vars))), type = "response")
+
+lam1 <- 0.01
+glm1_vars <- c("playoffs_1yr")
+glm1_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(glm1_vars))), y = as.matrix(train_scaled[[dep_var]]),
+                     lambda = lam1, alpha = 1, family = "binomial")
+glm1_pred_prob <- predict(glm1_model, as.matrix(train_scaled %>% select(all_of(glm1_vars))), type = "response")
 
 
 # choose models to evaluate (current model types and probs must have matching elements)
-current_model_types <- c("glm", "knn", "nb", "dt", "rf", "glm0", "glm1")
-probs <- list(glm_pred_prob, knn_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob, glm0_pred_prob, glm1_pred_prob)
+current_model_types <- c("glm")#, "knn", "nb", "dt", "rf", "glm0", "glm1")
+probs <- list(glm_pred_prob)#, knn_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob, glm0_pred_prob, glm1_pred_prob)
 
 # bin probabilities and create calibration plot
 num_breaks <- 11
@@ -253,9 +289,19 @@ ggplot(pr_plot, aes(x = recall_at_k, y = prec_at_k, color = model)) +
 
 
 # create AUC curve
+roc_df <- tibble()
 for(i in 1:length(probs)) {
   roc_curve <- pROC::roc(as.numeric(train[[dep_var]]), as.numeric(probs[[i]]))
-  add_to_existing <- ifelse(i == 1, FALSE, TRUE)
-  plot(roc_curve, main = paste0("ROC Curves"), col = plot_colors[i], lwd = 1, add = add_to_existing, mar = c(4, 4, 2, 2))
+  new_roc <- tibble(model = current_model_types[i], fpr = 1 - coords(roc_curve)$specificity, tpr = coords(roc_curve)$sensitivity)
+  roc_df <- rbind(new_roc)
 }
-legend("bottomright", legend = current_model_types, col = plot_colors, bty = "n", lty = 1, lwd = 2, cex = 0.6)
+ggplot(roc_df, aes(x = fpr, y = tpr, color = model)) +
+  geom_line(show.legend = FALSE) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(title = "ROC Curves", x = "False positive rate", y = "True positive rate") +
+  scale_color_manual(values = plot_colors) +
+  proj_theme +
+  theme(strip.text = element_text(size = 7),
+        strip.background = element_blank()) +
+  facet_wrap(vars(model))
+
