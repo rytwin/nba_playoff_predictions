@@ -54,7 +54,7 @@ train <- train %>%
 
 # calculate metrics based on always predicting the most likely class (with probability equal to prevalance)
 monkey_pred_prob = rep(actual_playoff_percent, nrow(train))
-monkey_pred = ifelse(actual_playoff_percent >= 0.5, 1, 0)
+monkey_pred = ifelse(monkey_pred_prob >= 0.5, 1, 0)
 monkey_logloss <- logLoss(train$playoffs, monkey_pred_prob)
 monkey_auc <- Metrics::auc(train$playoffs, monkey_pred_prob)
 monkey_accuracy <- sum(monkey_pred == train$playoffs) / nrow(train)
@@ -77,55 +77,85 @@ baseline <- tibble(type = "baseline", name = "playoffs_1yr", logloss = baseline_
 
 
 dep_var <- "playoffs"
-models <- list(c(names(train)[6:32], names(train)[39:59]),
-               c(names(train)[6:32]),
-               c(names(train)[6:32], names(train)[39:45]),
-               c(names(train)[39:59]),
-               c(names(train)[6:12]),
-               c(names(train)[6:32], names(train)[39:65]),
-               c(names(train)[6:32], names(train)[65]),
-               c(names(train)[6:32], names(train)[39:45], names(train)[65]),
-               c(names(train)[39:65]),
-               c(names(train)[6:12], names(train)[65]))
-# models <- list(c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "allnba_team_diff"),
-#                c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"),
-#                c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff"),
-#                c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "proj_win_pct_last2yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"),
-#                c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "proj_win_pct_last2yr", "allnba_team_diff"),
-#                c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "num_conf_teams", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "playoffs_last2yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "playoffs_last3yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "second_rd_last2yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "second_rd_last3yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last3yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "proj_win_pct_last2yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last2yr_over60", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last3yr_over60", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "champion_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "finals_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "conf_finals_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_g_tm", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "top_ws_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "sos_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_win_pct_adj", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_win_pct_tm_adj", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "srs_1yr", "allnba_team_diff"),
-#                c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "mov_1yr", "allnba_team_diff"),
-#                c("win_pct_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "coach_win_pct_diff", "new_coach_from_end", "second_rd_1yr", "conf_p_win_pct_1yr", "allnba_team_diff"))
+models <- list(#c("win_pct_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "new_coach_from_end"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "new_coach_from_end"),
+               # c("win_pct_1yr", "second_rd_1yr", "new_coach_from_end"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "num_conf_teams"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "num_conf_teams"),
+               c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "num_conf_teams"))
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "num_conf_teams"),
+               # c("win_pct_1yr", "new_coach_from_end", "num_conf_teams"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "new_coach_from_end", "num_conf_teams"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "new_coach_from_end", "num_conf_teams"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "num_conf_teams"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "num_conf_teams"),
+               # c("win_pct_1yr", "conf_finals_1yr"),
+               # c("win_pct_1yr", "net_rtg_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "new_coach_from_end", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "new_coach_from_end", "conf_finals_1yr"),
+               # c("win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "new_coach_from_end", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "new_coach_from_end", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "new_coach_from_end", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "num_conf_teams", "conf_finals_1yr"),
+               # c("win_pct_1yr", "playoffs_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "num_conf_teams", "conf_finals_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff"),
+               # c(names(train)[6:32], names(train[39:59])))
+               # c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"))
+               # c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff"))
+               # c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "proj_win_pct_last2yr"),
+               # c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"),
+               # c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr"),
+               # c("net_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "proj_win_pct_last2yr"),
+               # c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "num_conf_teams"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "playoffs_last2yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "playoffs_last3yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "second_rd_last2yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "second_rd_last3yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last3yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "proj_win_pct_last2yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last2yr_over60"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "win_pct_last3yr_over60"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "champion_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "finals_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "conf_finals_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_g_tm"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "top_ws_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "sos_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_win_pct_adj"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "coach_preseason_win_pct_tm_adj"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "srs_1yr"),
+               # c("net_rtg_1yr", "off_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "conf_p_win_pct_1yr", "coach_win_pct_diff", "win_pct_last2yr", "proj_win_pct_last3yr", "mov_1yr"),
+               # c("win_pct_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "coach_win_pct_diff", "new_coach_from_end", "second_rd_1yr", "conf_p_win_pct_1yr"))
 
 
 # calculate metrics for logistic regression models
 glm_metrics <- get_all_metrics(train_scaled, "glm", dep_var, models)
 
 # calculate metrics for knn models
-k_values <- c(5, 10)
+k_values <- c(66)
 knn_metrics <- list()
 for(k in k_values) {
   new <- get_all_metrics(train_scaled, "knn", dep_var, models, k = k)
@@ -137,7 +167,7 @@ knn_metrics <- bind_rows(knn_metrics)
 nb_metrics <- get_all_metrics(train, "nb", dep_var, models)
 
 # calculate metrics for logistic regressions with ridge regularization
-lambda_values <- c(0.001, 0.01, 0.1, 1, 10)
+lambda_values <- c(0.0092)
 glmnet0_metrics = list()
 for(m in models) {
   for(l in lambda_values) {
@@ -148,7 +178,7 @@ for(m in models) {
 glmnet0_metrics <- bind_rows(glmnet0_metrics)
 
 # calculate metrics for logistic regressions with lasso regularization
-lambda_values <- c(0.001, 0.01, 0.1, 1, 10)
+lambda_values <- c(0.0021)
 glmnet1_metrics = list()
 for(m in models) {
   for(l in lambda_values) {
@@ -170,54 +200,65 @@ all_metrics <- bind_rows(monkey, baseline, glm_metrics, knn_metrics, nb_metrics,
 
 
 # further evaluation of models
-glm_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr")
-#glm_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff")
+# glm_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr")
+glm_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff")
 glm_model <- glm(paste(dep_var, "~", paste(glm_vars, collapse = " + ")), train, family = "binomial")
 glm_pred_prob <- predict(glm_model, train, type = "response")
 glm_coef <- coef(glm_model)
 
-knn_vars <- c("playoffs_1yr")
+# k = 66
+# knn_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr")
+k = 53
+knn_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff")
 knn_model <- knn3(as.formula(paste(dep_var, "~", paste(knn_vars, collapse = " + "))), data = train_scaled, k = k)
 knn_pred_prob <- predict(knn_model, train_scaled, type = "prob")[, 2]
 
-nb_vars <- c("playoffs_1yr")
+nb_vars <- c("win_pct_1yr")
+#nb_vars <- c("win_pct_1yr", "allnba_team_diff")
 nb_model <- naiveBayes(as.formula(paste(dep_var, "~", paste(nb_vars, collapse = " + "))), data = train)
 nb_pred_prob <- predict(nb_model, train, type = "raw")[, 2]
 
-dt_vars <- c("playoffs_1yr")
+# dt_vars <- c("win_pct_1yr", "conf_win_pct_1yr", "second_rd_1yr", "num_conf_teams")
+dt_vars <- c("win_pct_1yr", "new_coach_from_end", "num_conf_teams", "allnba_team_diff")
 dt_model <- rpart(paste(dep_var, "~", paste(dt_vars, collapse = " + ")), data = train, method = "class")
 dt_pred_prob <- predict(dt_model, train, type = "prob")[, 2]
 rpart.plot(dt_model)
 print(dt_model)
 
-rf_vars <- c(names(train)[6:32], names(train)[39:59])
-#rf_vars <- c(names(train)[6:32], names(train)[39:65])
+# rf_vars <- c(names(train)[6:32], names(train)[39:59])
+rf_vars <- c(names(train)[6:32], names(train)[39:65])
 rf_train <- train %>%
   mutate(playoffs = as.factor(playoffs))
 rf_model <- randomForest(as.formula(paste(dep_var, "~", paste(rf_vars, collapse = " + "))), data = rf_train, type = "response")
 rf_pred_prob <- predict(rf_model, rf_train, type = "prob")[, 2]
 
-lam0 <- 0.01
-glm0_vars <- c("playoffs_1yr")
+# lam0 <- 0.0092
+# glm0_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr")
+lam0 <- 0.0104
+glm0_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff")
 glm0_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(glm0_vars))), y = as.matrix(train_scaled[[dep_var]]),
                      lambda = lam0, alpha = 0, family = "binomial")
 glm0_pred_prob <- predict(glm0_model, as.matrix(train_scaled %>% select(all_of(glm0_vars))), type = "response")
 glm0_coef <- coef(glm0_model)
 
-lam1 <- 0.01
-glm1_vars <- c("playoffs_1yr")
+# lam1 <- 0.0021
+# glm1_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr")
+lam1 <- 0.0027
+glm1_vars <- c("off_rtg_1yr", "def_rtg_1yr", "conf_win_pct_1yr", "second_rd_1yr", "new_coach_from_end", "coach_win_pct_diff", "win_pct_last2yr", "allnba_team_diff")
 glm1_model <- glmnet(x = as.matrix(train_scaled %>% select(all_of(glm1_vars))), y = as.matrix(train_scaled[[dep_var]]),
                      lambda = lam1, alpha = 1, family = "binomial")
 glm1_pred_prob <- predict(glm1_model, as.matrix(train_scaled %>% select(all_of(glm1_vars))), type = "response")
 glm1_coef <- coef(glm1_model)
 
-predictions <- tibble(actual = train$playoffs, monkey = monkey_pred_prob, baseline = baseline_pred_prob, knn = knn_pred_prob, nb = nb_pred_prob,
-                      glm = glm_pred_prob, glm0 = glm0_pred_prob, glm1 = glm_pred_prob, dt = dt_pred_prob, rf = rf_pred_prob)
+# predictions <- tibble(team = train$team, year = train$year, actual = train$playoffs, monkey = monkey_pred_prob, baseline = baseline_pred_prob, knn = knn_pred_prob,
+#                       nb = nb_pred_prob, glm = glm_pred_prob, glm0 = glm0_pred_prob, glm1 = glm_pred_prob, dt = dt_pred_prob, rf = rf_pred_prob)
+predictions2 <- tibble(team = train$team, year = train$year, actual = train$playoffs, monkey = monkey_pred_prob, baseline = baseline_pred_prob, knn = knn_pred_prob,
+                       nb = nb_pred_prob, glm = glm_pred_prob, glm0 = glm0_pred_prob, glm1 = glm_pred_prob, dt = dt_pred_prob, rf = rf_pred_prob)
 
 
 # choose models to evaluate (current model types and probs must have matching elements)
-current_model_types <- c("glm", "rf", "nb", "dt")#, "knn", "glm0", "glm1")
-probs <- list(glm_pred_prob, rf_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob)#, knn_pred_prob, glm0_pred_prob, glm1_pred_prob)
+current_model_types <- c("glm", "rf", "nb", "dt", "knn", "glm0", "glm1")
+probs <- list(glm_pred_prob, rf_pred_prob, nb_pred_prob, dt_pred_prob, knn_pred_prob, glm0_pred_prob, glm1_pred_prob)
 
 # bin probabilities and create calibration plot
 num_breaks <- 11
@@ -239,13 +280,13 @@ cal_plot <- cal_plot %>% pivot_longer(cols = -prob, names_to = "model", values_t
 ggplot(cal_plot, aes(x = prob, y = emp_prob, color = model)) +
   geom_line(show.legend = FALSE) +
   geom_point(size = 0.75, show.legend = FALSE) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", alpha = 0.5) +
   scale_color_manual(values = plot_colors) +
   labs(title = "Calibration", x = "Predicted probability", y = "Empirical probability") +
-  facet_wrap(vars(model)) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
-        strip.background = element_blank())
+        strip.background = element_blank()) +
+  facet_wrap(vars(model))
 
 
 # create precision-at-k plots

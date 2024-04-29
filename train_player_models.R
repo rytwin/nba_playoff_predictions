@@ -15,6 +15,7 @@ source("functions.R")
 data <- read.csv("data/player_features.csv") %>%
   filter(year >= 1996,
          out_for_season != 1) %>%
+  select(-out_for_season) %>%
   drop_na()
 
 # train-test split
