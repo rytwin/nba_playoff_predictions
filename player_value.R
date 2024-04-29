@@ -51,7 +51,7 @@ weights2 <- weights2 / sum(weights2)
 # create new features and select relevant features
 features_df <- df %>%
   arrange(player, year) %>%
-  mutate(across(c(allnba_share, g_1yr:allnba_val_3yr), ~ replace(., is.na(.), 0)),
+  mutate(across(c(allnba, allnba_share, g_1yr:allnba_val_3yr), ~ replace(., is.na(.), 0)),
          pick = ifelse(is.na(pick) | pick > 65, 65, pick)) %>%
   group_by(player_id) %>%
   mutate(cum_pts_pg = cumsum(pts_1yr) / cumsum(g_1yr),
@@ -68,6 +68,9 @@ features_df <- df %>%
          cum_alldef = cumsum(alldef_1yr),
          cum_alldef_share = cumsum(alldef_share_1yr),
          cum_allnba_val = cumsum(allnba_val_1yr),
+         cum_allnba1 = cumsum(allnba1_1yr),
+         cum_allnba2 = cumsum(allnba2_1yr),
+         cum_allnba3 = cumsum(allnba3_1yr),
          ws_48_adj_avg_3yr = case_when(exp > 3 ~ ws_48_adj_1yr * weights3[1] + ws_48_adj_2yr * weights3[2] + ws_48_adj_3yr * weights3[3],
                                        exp == 3 ~ ws_48_adj_1yr * weights2[1] + ws_48_adj_2yr * weights2[2],
                                        exp <= 2 ~ ws_48_adj_1yr),
@@ -81,7 +84,7 @@ features_df <- df %>%
                                         exp == 3 ~ allnba_val_1yr * weights2[1] + allnba_val_2yr * weights2[2],
                                         exp <= 2 ~ allnba_val_1yr),) %>%
   ungroup() %>%
-  select(player_id, pl_yr_id, year, pick, age, exp, yrs_off, allnba_share, g_1yr:allnba_val_avg_3yr)
+  select(player_id, pl_yr_id, year, pick, age, exp, yrs_off, allnba, allnba_share, g_1yr:allnba_val_avg_3yr)
 
 
 # NOTE: players who were on an opening night roster for their final season but did not play that season will have NA values for most stats.
@@ -125,6 +128,15 @@ features_plus <- features_df %>%
                                       !is.na(lag(allnba_share, 2)) ~ lag(allnba_share, 2),
                                       TRUE ~ allnba_share_1yr),
          allnba_share = ifelse(is.na(allnba_share), 0, allnba_share),
+         allnba_1yr = case_when(!is.na(allnba_1yr) ~ allnba_1yr,
+                                      lag(player_id) != player_id ~ 0,
+                                      !is.na(lag(allnba)) ~ lag(allnba),
+                                      lag(player_id, 2) != player_id ~ 0,
+                                      !is.na(lag(allnba, 2)) ~ lag(allnba, 2),
+                                      lag(player_id, 3) != player_id ~ 0,
+                                      !is.na(lag(allnba, 2)) ~ lag(allnba, 2),
+                                      TRUE ~ allnba_1yr),
+         allnba = ifelse(is.na(allnba), 0, allnba),
          exp = case_when(!is.na(exp) ~ exp,
                          lead(player_id) != player_id & lag(player_id) != player_id ~ 1,
                          !is.na(lag(exp)) & lag(player_id) == player_id ~ lag(exp) + 1,
@@ -133,15 +145,30 @@ features_plus <- features_df %>%
                          !is.na(lead(exp)) & lead(player_id) == player_id ~ lead(exp),
                          !is.na(lead(exp, 2)) & lead(player_id, 2) == player_id ~ lead(exp, 2),
                          !is.na(lead(exp, 3)) & lead(player_id, 3) == player_id ~ lead(exp, 3),
-                         TRUE ~ exp),
+                         TRUE ~ 1),
          yrs_off = case_when(!is.na(yrs_off) ~ yrs_off,
                              lag(player_id) != player_id ~ 0,
                              lag(exp) == 1 ~ 0,
                              !is.na(lag(yrs_off)) ~ year - lag(year) - 1,
                              !is.na(lag(yrs_off, 2)) ~ year - lag(year, 2) - 1,
                              !is.na(lag(yrs_off, 3)) ~ year - lag(year, 3) - 1,
-                             TRUE ~ yrs_off)) %>%
-  select(-c(od_year, od_player_id, od_age, od_pick, allnba_share))
+                             TRUE ~ yrs_off),
+         cum_p_pts_pg = ifelse(is.na(cum_p_pts_pg), median(cum_p_pts_pg, na.rm = TRUE), cum_p_pts_pg),
+         old_first = ifelse(age >= 28 & cum_allnba == 1 & allnba_1yr == 1 & allnba_share_1yr < 0.6, 1, 0),
+         young_star = ifelse((allnba_share_1yr >= 0.3 | cum_allnba_share >= 0.8) & age < 25, 1, 0),
+         notrotation_1yr = ifelse(min_pg_1yr < 15, 1, 0),
+         notstarter_1yr = ifelse(min_pg_1yr < 28, 1, 0),
+         high_pick = ifelse(pick <= 10 & roy_share_1yr >= 0.5 & exp <= 2, 1, 0),
+         star = ifelse(allnba_share_avg_3yr > 0.4 & age <= 30, 1, 0),
+         rookie = ifelse(exp == 1, 1, 0),
+         injured = ifelse(g_pct_1yr < 0.65 & pts_pg_1yr > 15 & cum_allnba_share > 1 & age < 35, 1, 0),
+         years_from_prime = ifelse(age > 31, age - 31, max(0, 25 - age))) %>%
+  select(player_id, year, od_team, allnba, pick, age, exp, yrs_off, g_pct_1yr, g_pct_2yr, min_pg_1yr, min_pg_2yr, pts_pg_1yr, pts_pg_2yr, ortg_1yr,
+         drtg_1yr,per_1yr, ws_48_adj_1yr, ws_48_adj_2yr, bpm_1yr, vorp_1yr, p_ws_1yr, p_ws_2yr, mvp_share_1yr, mvp_share_2yr, roy_share_1yr, roy_share_2yr,
+         dpoy_share_1yr, dpoy_share_2yr, mip_share_1yr, mip_share_2yr, allnba_1yr, allnba1_1yr, allnba2_1yr, allnba3_1yr, allnba_share_1yr,
+         allnba_share_2yr, allnba_share_3yr, alldef_share_1yr, alldef_share_2yr, allnba_val_1yr, allnba_val_2yr, allnba_val_3yr, cum_pts_pg, cum_ws,
+         cum_vorp, cum_p_g, cum_p_pts_pg, cum_p_ws, cum_p_vorp, cum_mvp_share, cum_dpoy_share, cum_allnba, cum_allnba_share, cum_alldef, cum_alldef_share,
+         cum_allnba_val, ws_48_adj_avg_3yr, allnba_share_avg_3yr, mvp_share_avg_3yr, allnba_val_avg_3yr, old_first:years_from_prime)
 
 # save file
 write.csv(features_plus, "data/player_features.csv", row.names = FALSE)
