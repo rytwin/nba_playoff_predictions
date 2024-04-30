@@ -14,6 +14,7 @@ source("functions.R")
 # read in data, filter for years >= 1996, drop NAs
 data <- read.csv("data/player_features.csv") %>%
   filter(year >= 1996,
+         year != 2024,
          out_for_season != 1) %>%
   select(-out_for_season) %>%
   drop_na()
@@ -77,8 +78,8 @@ baseline <- tibble(type = "baseline", name = "allnba_1yr", logloss = baseline_lo
 
 
 dep_var <- "allnba"
-models <- list(c("allnba_share_1yr"),
-               c("allnba_share_1yr", "age"))
+models <- list(c("vorp_1yr"),
+               c("vorp_1yr", "cum_p_pts_pg"))
 
 
 # calculate metrics for logistic regression models
@@ -130,7 +131,7 @@ all_metrics <- bind_rows(monkey, baseline, glm_metrics, knn_metrics, nb_metrics,
 
 
 # further evaluation of models
-glm_vars <- c()
+glm_vars <- c("cum_p_pts_pg", "vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "mvp_share_avg_3yr", "dpoy_share_1yr", "per_1yr", "ortg_1yr")
 glm_model <- glm(paste(dep_var, "~", paste(glm_vars, collapse = " + ")), train, family = "binomial")
 glm_pred_prob <- predict(glm_model, train, type = "response")
 glm_coef <- coef(glm_model)
