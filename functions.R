@@ -443,7 +443,7 @@ calculate_model_metrics <- function(df, model_type, model_formula, num_folds = 1
       } 
       pred <- ifelse(pred_prob > 0.5, 1, 0)
       
-      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data[[dep_var]]))
+      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data[[dep_var]]), positive = "1")
       accuracy <- conf_matrix$overall["Accuracy"]
       precision <- conf_matrix$byClass["Precision"]
       recall <- conf_matrix$byClass["Sensitivity"]
@@ -504,7 +504,7 @@ calculate_glmnet_metrics <- function(df, dep_var, ind_vars, num_folds = 10, num_
       pred_prob <- predict(new_model, test_x, type = "response")
       pred <- ifelse(pred_prob > 0.5, 1, 0)
       
-      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data[[dep_var]]))
+      conf_matrix <- confusionMatrix(as.factor(pred), as.factor(test_data[[dep_var]]), positive = "1")
       accuracy <- conf_matrix$overall["Accuracy"]
       precision <- conf_matrix$byClass["Precision"]
       recall <- conf_matrix$byClass["Sensitivity"]
