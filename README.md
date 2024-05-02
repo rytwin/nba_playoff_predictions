@@ -13,6 +13,7 @@ For scraping:</br>
 For initial feature selection and engineering: </br>
 -`feature_engineering.R`: Initial feature selection and feature engineering for team data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped).</br>
 -`player_value.R`: Initial feature selection and feature engineering for player data. Importantly, matches each response variable with data from only prior seasons (instead of the same season as it is when originally scraped). Also groups player data by team and by opening day team to use as variables for team models.</br>
+-`train_player_model_sohaib.Rmd`: Investigation and analysis of important features for predicting player performance.<br>
 
 For modeling: </br>
 -`train_team_models.R`: Trains various classification models for playoffs or not </br>
