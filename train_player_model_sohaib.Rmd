@@ -1,3 +1,21 @@
+---
+title: "Untitled"
+author: "Sohaib Hasan"
+date: "2024-05-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
 library(tidyverse)
 library(rsample)
 library(Metrics)
@@ -10,21 +28,153 @@ library(rpart.plot)
 library(randomForest)
 library(pROC)
 source("functions.R")
+```
 
+```{r}
 # read in data, filter for years >= 1996, drop NAs
-data <- read.csv("data/player_features.csv") %>%
+data <- read.csv("/Users/sohaibhasan/Downloads/data/player_features.csv") %>%
   filter(year >= 1996,
          year != 2024,
          out_for_season != 1) %>%
   select(-out_for_season) %>%
   drop_na()
+```
+#Sohaib's Code
+```{r}
+# Standardize metrics and create composite player value score
+data <- data %>%
+  mutate(
+    standardized_pts_pg = scale(pts_pg_1yr, center = TRUE, scale = TRUE),
+    standardized_ws = scale(ws_48_adj_1yr, center = TRUE, scale = TRUE),
+    standardized_per = scale(per_1yr, center = TRUE, scale = TRUE),
+    standardized_vorp = scale(vorp_1yr, center = TRUE, scale = TRUE),
+    player_value = (standardized_pts_pg + standardized_ws + standardized_per + standardized_vorp) / 4
+  )
 
+```
+
+```{r}
 # train-test split
 set.seed(365)
 split <- initial_split(data, 0.8)
 train <- training(split)
 test <- testing(split)
+```
+#Sohaib's Code
+```{r}
+# Fit a linear regression model to predict player value
+lm_model <- lm(player_value ~ age + exp + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr + mvp_share_avg_3yr, data = train)
+predictions <- predict(lm_model, test)
+rmse <- sqrt(mean((test$player_value - predictions)^2))
+r_squared <- summary(lm_model)$r.squared
+cat("RMSE: ", rmse, "\nR-squared: ", r_squared, "\n")
+```
+#Sohaib's Code
+```{r}
+# Checking for multicollinearity with Variance Inflation Factors (VIF)
+library(car)
+vif(lm_model)  # If VIF values are greater than 5 or 10, then it indicates high multicollinearity
 
+# Exploring correlation between predictors
+cor(train[c("mvp_share_avg_3yr", "allnba_share_avg_3yr", "min_pg_1yr", "g_pct_1yr")])
+
+# Refitting the model again
+model_without_mvp <- lm(player_value ~ age + exp + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr, data = train)
+summary(model_without_mvp)
+
+```
+#Sohaib's Code
+```{r}
+#Feature Engineering
+# Adding an interaction term between 'age' and 'exp'
+train$age_exp_interaction <- train$age * train$exp
+
+# Fitting model with the interaction term
+lm_model_with_interaction <- lm(player_value ~ age + exp + age_exp_interaction + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr + mvp_share_avg_3yr, data = train)
+summary(lm_model_with_interaction)
+
+```
+
+#Sohaib's Code
+```{r}
+#Stepwise Regression
+library(MASS)
+
+# Performws both forward and backward stepwise regression
+stepwise_model <- stepAIC(lm(player_value ~ age + exp + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr + mvp_share_avg_3yr, data = train),
+                          direction = "both",
+                          trace = FALSE) 
+
+summary(stepwise_model)
+
+```
+#Sohaib's Code
+```{r}
+#LASSO Regression
+
+# Prepare matrix of predictors and response variables
+x <- model.matrix(player_value ~ age + exp + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr + mvp_share_avg_3yr, data = train)[,-1]
+y <- train$player_value
+
+# LASSO model
+lasso_model <- glmnet(x, y, alpha = 1)  
+plot(lasso_model, xvar = "lambda", label = TRUE)
+
+# Cross-validation for lambda selection
+cv_lasso <- cv.glmnet(x, y, alpha = 1)
+plot(cv_lasso)
+best_lambda <- cv_lasso$lambda.min
+cat("Best lambda for LASSO: ", best_lambda, "\n")
+
+```
+#Sohaib's Code
+```{r}
+#Ridge Regression
+
+ridge_model <- glmnet(x, y, alpha = 0)  
+
+plot(ridge_model, xvar = "lambda", label = TRUE)
+
+# Cross-validation for lambda selection
+cv_ridge <- cv.glmnet(x, y, alpha = 0)
+plot(cv_ridge)
+best_lambda_ridge <- cv_ridge$lambda.min
+cat("Best lambda for Ridge: ", best_lambda_ridge, "\n")
+
+```
+#Sohaib's Code
+```{r}
+library(boot)
+
+boot_fn <- function(data, index) {
+  fit <- lm(player_value ~ age + exp + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr + mvp_share_avg_3yr, data = data, subset = index)
+  return(summary(fit)$r.squared)
+}
+
+# Running the bootstrap
+set.seed(123)  
+bootstrap_results <- boot(data = train, statistic = boot_fn, R = 1000)  
+
+boot.ci(bootstrap_results, type = "basic")
+plot(bootstrap_results)
+
+```
+#Sohaib's Code
+
+```{r}
+# K-fold cross-validation
+set.seed(123)
+cv_results <- train(player_value ~ age + exp + g_pct_1yr + min_pg_1yr + allnba_share_avg_3yr + mvp_share_avg_3yr, 
+                    data = train, 
+                    method = "lm",
+                    trControl = trainControl(method = "cv", number = 10))
+
+summary(cv_results)
+
+```
+
+
+```{r}
 # calculate true prevalance (in training set)
 actual_allnba_pct <- sum(train$allnba) / nrow(train)
 
@@ -39,6 +189,9 @@ for(col in colnames(train)) {
 train <- train %>%
   mutate(across(c(year, all_of(binary_variables)), as.factor))
 
+```
+
+```{r}
 # standardize variables (and then convert binary variables back into numeric values instead of factors)
 std_scaler <- preProcess(train)
 train_scaled <- predict(std_scaler, train) %>%
@@ -52,10 +205,13 @@ train <- train %>%
   mutate(across(all_of(binary_variables), as.numeric),
          across(all_of(binary_variables), ~ ifelse(. == 1, 0, 1)))
 
+```
 
+
+```{r}
 # calculate metrics based on always predicting the most likely class (with probability equal to prevalance)
 monkey_pred_prob = rep(actual_allnba_pct, nrow(train))
-monkey_pred = ifelse(monkey_pred_prob >= 0.5, 1, 0)
+monkey_pred = ifelse(actual_allnba_pct >= 0.5, 1, 0)
 monkey_logloss <- logLoss(train$allnba, monkey_pred_prob)
 monkey_auc <- Metrics::auc(train$allnba, monkey_pred_prob)
 monkey_accuracy <- sum(monkey_pred == train$allnba) / nrow(train)
@@ -77,59 +233,15 @@ baseline <- tibble(type = "baseline", name = "allnba_1yr", logloss = baseline_lo
                    precision = baseline_precision, recall = baseline_recall, f1_score = baseline_f1)
 
 
-train <- train %>%
-  mutate(years_past_prime = pmax(0, age - 30),
-         year_from_prime = ifelse(age > 31, age - 31, pmax(0, 25 - age)),
-         young_pick = ifelse(exp <= 3, 66 - pick, 0))
-
 dep_var <- "allnba"
-models <- list(#c("vorp_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws"),
-               c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick"))
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "old_first"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "years_from_prime"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "mvp_share_avg_3yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "dpoy_share_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "ortg_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba_share_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba_val_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba1_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba2_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba3_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "p_ws_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "ws_48_adj_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "pick"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "exp"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "cum_allnba_val"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "cum_allnba_share"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "allnba_val_avg_3yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "young_star"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "high_pick"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "star"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "injured"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "cum_p_vorp"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "alldef_share_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_alldef_share"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "cum_allnba"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "drtg_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "mip_share_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "roy_share_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "mvp_share_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "bpm_1yr"),
-               # c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick", "years_past_prime"))
+models <- list(c("vorp_1yr"),
+               c("vorp_1yr", "cum_p_pts_pg"))
 
+```
 
+```{r}
 # calculate metrics for logistic regression models
-glm_metrics <- get_all_metrics(train, "glm", dep_var, models)
+glm_metrics <- get_all_metrics(train_scaled, "glm", dep_var, models)
 
 # calculate metrics for knn models
 k_values <- c(5, 10)
@@ -144,7 +256,7 @@ knn_metrics <- bind_rows(knn_metrics)
 nb_metrics <- get_all_metrics(train, "nb", dep_var, models)
 
 # calculate metrics for logistic regressions with ridge regularization
-lambda_values <- c(0.05, 0.1, 0.5)
+lambda_values <- c(0.001, 0.01, 0.1, 1, 10)
 glmnet0_metrics = list()
 for(m in models) {
   for(l in lambda_values) {
@@ -154,6 +266,9 @@ for(m in models) {
 }
 glmnet0_metrics <- bind_rows(glmnet0_metrics)
 
+```
+
+```{r}
 # calculate metrics for logistic regressions with lasso regularization
 lambda_values <- c(0.001, 0.01, 0.1, 1, 10)
 glmnet1_metrics = list()
@@ -177,9 +292,9 @@ all_metrics <- bind_rows(monkey, baseline, glm_metrics, knn_metrics, nb_metrics,
 
 
 # further evaluation of models
-glm_vars <- c("vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "yrs_off", "cum_p_pts_pg", "notrotation_1yr", "per_1yr", "cum_p_ws", "young_pick")
+glm_vars <- c("cum_p_pts_pg", "vorp_1yr", "allnba_share_avg_3yr", "notstarter_1yr", "age", "ws_48_adj_avg_3yr", "mvp_share_avg_3yr", "dpoy_share_1yr", "per_1yr", "ortg_1yr")
 glm_model <- glm(paste(dep_var, "~", paste(glm_vars, collapse = " + ")), train, family = "binomial")
-glm_pred_prob <- predict(glm_model, test, type = "response")
+glm_pred_prob <- predict(glm_model, train, type = "response")
 glm_coef <- coef(glm_model)
 
 knn_vars <- c()
@@ -219,10 +334,13 @@ glm1_coef <- coef(glm1_model)
 predictions <- tibble(actual = train$playoffs, monkey = monkey_pred_prob, baseline = baseline_pred_prob, knn = knn_pred_prob, nb = nb_pred_prob,
                       glm = glm_pred_prob, glm0 = glm0_pred_prob, glm1 = glm_pred_prob, dt = dt_pred_prob, rf = rf_pred_prob)
 
+```
 
+
+```{r}
 # choose models to evaluate (current model types and probs must have matching elements)
-current_model_types <- c("Logistic")#, "rf", "nb", "dt", "knn", "glm0", "glm1")
-probs <- list(glm_pred_prob)#, rf_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob, knn_pred_prob, glm0_pred_prob, glm1_pred_prob)
+current_model_types <- c("glm", "rf", "nb", "dt")#, "knn", "glm0", "glm1")
+probs <- list(glm_pred_prob, rf_pred_prob, nb_pred_prob, dt_pred_prob, rf_pred_prob)#, knn_pred_prob, glm0_pred_prob, glm1_pred_prob)
 
 # bin probabilities and create calibration plot
 num_breaks <- 11
@@ -233,7 +351,7 @@ for(p in probs) {
   emp_prob <- numeric()
   for(i in levels(bins)) {
     inds <- which(bins == i)
-    actual <- (test %>% pull(allnba))[inds]
+    actual <- (train %>% pull(playoffs))[inds]
     emp_prob <- c(emp_prob, sum(actual) / length(actual))
   }
   cal_plot <- cbind(cal_plot, tibble(emp_prob))
@@ -247,14 +365,16 @@ ggplot(cal_plot, aes(x = prob, y = emp_prob, color = model)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
   scale_color_manual(values = plot_colors) +
   labs(title = "Calibration", x = "Predicted probability", y = "Empirical probability") +
+  facet_wrap(vars(model)) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
         strip.background = element_blank())
-  facet_wrap(vars(model))
+```
 
 
+```{r}
 # create precision-at-k plots
-outcomes <- as.logical(test[[dep_var]])
+outcomes <- as.logical(train[[dep_var]])
 prec_plot <- tibble(k = 1:length(outcomes))
 for(p in probs) {
   index_sort <- order(p, decreasing = TRUE)
@@ -276,12 +396,12 @@ ggplot(prec_plot, aes(x = k, y = prec_at_k, color = model)) +
   scale_color_manual(values = plot_colors) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
-        strip.background = element_blank())
+        strip.background = element_blank()) +
   facet_wrap(vars(model))
 
 
 # create recall-at-k plots
-outcomes <- as.logical(test[[dep_var]])
+outcomes <- as.logical(train[[dep_var]])
 recall_plot <- tibble(k = 1:length(outcomes))
 for(p in probs) {
   index_sort <- order(p, decreasing = TRUE)
@@ -303,7 +423,7 @@ ggplot(recall_plot, aes(x = k, y = recall_at_k, color = model)) +
   scale_color_manual(values = plot_colors) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
-        strip.background = element_blank())
+        strip.background = element_blank()) +
   facet_wrap(vars(model))
 
 
@@ -318,14 +438,14 @@ ggplot(pr_plot, aes(x = recall_at_k, y = prec_at_k, color = model)) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
         strip.background = element_blank(),
-        legend.key = element_blank())
+        legend.key = element_blank()) +
   facet_wrap(vars(model))
 
 
 # create AUC curve
 roc_df <- tibble()
 for(i in 1:length(probs)) {
-  roc_curve <- pROC::roc(as.numeric(test[[dep_var]]), as.numeric(probs[[i]]))
+  roc_curve <- pROC::roc(as.numeric(train[[dep_var]]), as.numeric(probs[[i]]))
   new_roc <- tibble(model = current_model_types[i], fpr = 1 - coords(roc_curve)$specificity, tpr = coords(roc_curve)$sensitivity)
   roc_df <- rbind(roc_df, new_roc)
 }
@@ -336,44 +456,9 @@ ggplot(roc_df, aes(x = fpr, y = tpr, color = model)) +
   scale_color_manual(values = plot_colors) +
   proj_theme +
   theme(strip.text = element_text(size = 7),
-        strip.background = element_blank())
+        strip.background = element_blank()) +
   facet_wrap(vars(model))
 
 
-# merge model predictions with team stats for team prediction
-final_model <- glm(paste(dep_var, "~", paste(glm_vars, collapse = " + ")), data, family = "binomial")
-pdata <- read.csv("data/player_features.csv")
-pdata <- pdata %>%
-  mutate(allnba_pred = predict(final_model, pdata, type = "response"))
-
-grouped_by_team <- pdata %>%
-  filter(out_for_season == 0) %>%
-  select(-out_for_season) %>%
-  group_by(od_team, year) %>%
-  summarize(allnba_team_pred_sum = sum(allnba_pred, na.rm = TRUE),
-            allnba_team_pred_max = max(allnba_pred, na.rm = TRUE),
-            allnba_team_pred_count = sum(allnba_pred >= 0.1, na.rm = TRUE),
-            allnba_team_pred_count2 = sum(allnba_pred >= 0.05, na.rm = TRUE)) %>%
-  filter(od_team != "XXX")
-
-data2 <- read.csv("data/all_player_stats_1980-2024.csv")
-team_stats_from_players <- data2 %>%
-  mutate(across(c(allnba_share, mp), ~ replace(., is.na(.), 0))) %>%
-  filter(team != "TOT",
-         mp != 0) %>%
-  group_by(pl_yr_id) %>%
-  mutate(allnba_share = (mp / sum(mp)) * allnba_share) %>%
-  select(pl_yr_id, player, year, team, allnba_share) %>%
-  ungroup() %>%
-  group_by(team, year) %>%
-  summarize(allnba_team_tot = sum(allnba_share)) %>%
-  ungroup() %>%
-  arrange(team, year) %>%
-  prior_years_stats_simple("allnba_team_tot", 1, "team") %>%
-  merge(grouped_by_team, by.x = c("team", "year"), by.y = c("od_team", "year"), all = TRUE) %>%
-  select(-allnba_team_tot) %>%
-  mutate(allnba_team_diff = allnba_team_pred_sum - allnba_team_tot_1yr)
-
-write.csv(team_stats_from_players, "data/team_stats_from_players_with_model_predictions.csv", row.names = FALSE)
-
+```
 
